@@ -1,0 +1,2 @@
+[console_scripts]
+omniops = omniops.api.main:main

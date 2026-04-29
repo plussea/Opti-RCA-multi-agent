@@ -1,3 +1,44 @@
+Metadata-Version: 2.1
+Name: omniops
+Version: 0.1.0
+Summary: OmniOps — 结构化数据驱动的智能诊断与建议系统
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: uvicorn[standard]>=0.24.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: pydantic-settings>=2.1.0
+Requires-Dist: python-multipart>=0.0.6
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: openpyxl>=3.1.0
+Requires-Dist: qdrant-client>=1.7.0
+Requires-Dist: neo4j>=5.15.0
+Requires-Dist: redis>=5.0.0
+Requires-Dist: sqlalchemy[asyncio]>=2.0.0
+Requires-Dist: asyncpg>=0.29.0
+Requires-Dist: anthropic>=0.21.0
+Requires-Dist: python-jose[cryptography]>=3.3.0
+Requires-Dist: structlog>=23.0.0
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: tenacity>=8.2.0
+Requires-Dist: python-dateutil>=2.8.0
+Requires-Dist: chardet>=5.2.0
+Provides-Extra: ocr
+Requires-Dist: paddlepaddle>=2.5.0; extra == "ocr"
+Requires-Dist: paddleocr>=2.7.0; extra == "ocr"
+Requires-Dist: pillow>=10.0.0; extra == "ocr"
+Requires-Dist: pdf2image>=1.16.0; extra == "ocr"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: httpx>=0.25.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.7.0; extra == "dev"
+Requires-Dist: pre-commit>=3.5.0; extra == "dev"
+Requires-Dist: types-python-dateutil; extra == "dev"
+Requires-Dist: types-redis; extra == "dev"
+
 # OmniOps
 
 结构化数据驱动的智能诊断与建议系统
