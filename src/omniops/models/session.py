@@ -13,11 +13,22 @@ class InputType(str, Enum):
 
 
 class SessionStatus(str, Enum):
-    ANALYZING = "analyzing"
-    COMPLETED = "completed"
-    NEEDS_REVIEW = "needs_review"
+    # --- pipeline stages ---
+    PERCEIVED = "perceived"     # 感知完成，等待路由
+    DIAGNOSING = "diagnosing"   # 诊断中
+    PLANNING = "planning"        # 方案生成中
+    VERIFYING = "verifying"     # 校验中
+    PENDING_HUMAN = "pending_human"  # 等待人工审核（MQ挂起）
+    # --- outcomes ---
     APPROVED = "approved"
     REJECTED = "rejected"
+    RESOLVED = "resolved"       # 知识沉淀后关闭
+    COMPLETED = "completed"      # 无需HITL，自动完成
+    FAILED = "failed"            # 失败
+    ESCALATED = "escalated"     # 人工审核超时
+    # --- legacy aliases (for backward compat) ---
+    ANALYZING = "analyzing"
+    NEEDS_REVIEW = "needs_review"
 
 
 class Severity(str, Enum):
@@ -112,6 +123,10 @@ class Session(BaseModel):
         description="感知层元数据（告警数量、网元数量、严重级别分布）",
     )
     status: SessionStatus = SessionStatus.ANALYZING
+    current_step: str = Field(
+        default="init",
+        description="当前流水线步骤：init/perceived/diagnosing/planning/verifying/pending_human/resolved",
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

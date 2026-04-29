@@ -24,6 +24,8 @@ dependencies = [
     "chardet>=5.2.0",
     "loguru>=0.7.0",
     "pyyaml>=6.0.0",
+    "python-dotenv>=1.0.1",
+    "aio-pika>=9.0.0",
 ]
 
 [project.optional-dependencies]

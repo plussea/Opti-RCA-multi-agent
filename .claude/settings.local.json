@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue *)",
+      "Bash(curl --version)",
+      "Bash(winget install *)",
+      "Bash(gh *)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(curl -sI https://api.github.com)",
+      "Bash(nslookup *)",
+      "Bash(curl -v https://api.github.com --max-time 10)",
+      "Bash(export HTTPS_PROXY=\"http://127.0.0.1:7897\" HTTP_PROXY=\"http://127.0.0.1:7897\")",
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(PYTHONPATH=src python *)",
+      "Bash(pip install *)",
+      "Bash(uv sync *)",
+      "Bash(PYTHONPATH=src uv run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(uv add *)",
+      "Bash(uv pip *)",
+      "Bash(uv run *)",
+      "Bash(git reset *)"
+    ]
+  }
+}

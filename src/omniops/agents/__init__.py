@@ -4,6 +4,7 @@ from omniops.agents.diagnosis import DiagnosisAgent
 from omniops.agents.impact import ImpactAgent
 from omniops.agents.perception import PerceptionAgent
 from omniops.agents.planning import PlanningAgent
+from omniops.agents.verification import VerificationAgent
 
 __all__ = [
     "BaseAgent",
@@ -11,4 +12,5 @@ __all__ = [
     "DiagnosisAgent",
     "ImpactAgent",
     "PlanningAgent",
+    "VerificationAgent",
 ]

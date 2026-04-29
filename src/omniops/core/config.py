@@ -45,8 +45,21 @@ class Settings(BaseSettings):
     )
     anthropic_max_tokens: int = Field(default=2048)
 
+    # ===================
+    # Generic LLM settings (used when provider != anthropic)
+    # ===================
+    llm_provider: str = Field(default="anthropic", validation_alias="LLM_PROVIDER")
+    llm_model: str = Field(default="claude-3-5-sonnet-20241022", validation_alias="LLM_MODEL")
+
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-4o")
+    openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
+
+    openrouter_api_key: str = Field(default="", validation_alias="OPENROUTER_API_KEY")
+    openrouter_model: str = Field(default="anthropic/claude-3-haiku", validation_alias="OPENROUTER_MODEL")
+
+    minimax_api_key: str = Field(default="", validation_alias="MINIMAX_API_KEY")
+    minimax_model: str = Field(default="MiniMax-Text-01", validation_alias="MINIMAX_MODEL")
+    minimax_group_id: str = Field(default="", validation_alias="MINIMAX_GROUP_ID")
 
     # ===================
     # 向量数据库配置
@@ -97,6 +110,30 @@ class Settings(BaseSettings):
 
     # 日志级别
     log_level: str = Field(default="INFO")
+
+    # ===================
+    # RabbitMQ 配置
+    # ===================
+    rabbitmq_url: str = Field(
+        default="amqp://omniops:omniops123@localhost:5672/",
+        validation_alias="RABBITMQ_URL",
+    )
+    rabbitmq_management_url: str = Field(
+        default="http://localhost:15672",
+        validation_alias="RABBITMQ_MANAGEMENT_URL",
+    )
+
+    # ===================
+    # HITL (Human-in-the-Loop) 配置
+    # ===================
+    hitl_timeout_seconds: int = Field(default=600, validation_alias="HITL_TIMEOUT_SECONDS")
+    hitl_escalation_webhook_url: str = Field(default="", validation_alias="HITL_ESCALATION_WEBHOOK_URL")
+
+    # ===================
+    # Agent Consumer 并发数
+    # ===================
+    diagnosis_consumer_count: int = Field(default=2)
+    planning_consumer_count: int = Field(default=1)
 
     @property
     def project_root(self) -> Path:

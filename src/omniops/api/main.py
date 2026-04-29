@@ -48,12 +48,56 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Seed knowledge initialization failed: {e}")
 
+    # 启动 RabbitMQ 消费者
+    consumer_tasks: list = []
+    try:
+        from omniops.mq import setup_mq
+        from omniops.consumers import (
+            DiagnosisConsumer,
+            PlanningConsumer,
+            VerificationConsumer,
+            ClosureConsumer,
+        )
+
+        await setup_mq()
+        logger.info("RabbitMQ exchanges and queues declared")
+
+        # 启动消费任务
+        for consumer_cls, count in [
+            (DiagnosisConsumer, settings.diagnosis_consumer_count),
+            (PlanningConsumer, settings.planning_consumer_count),
+            (VerificationConsumer, 1),
+            (ClosureConsumer, 1),
+        ]:
+            for i in range(count):
+                instance = consumer_cls()
+                task = asyncio.create_task(instance.run(), name=f"{consumer_cls.__name__}-{i}")
+                consumer_tasks.append(task)
+                logger.info(f"Started consumer: {consumer_cls.__name__}-{i}")
+
+    except Exception as e:
+        logger.warning(f"RabbitMQ consumer startup failed (may not be running): {e}")
+
+    app.state.consumer_tasks = consumer_tasks
     logger.info(f"OmniOps started on {settings.api_host}:{settings.api_port}")
 
     yield
 
     # 关闭时
     logger.info("Shutting down OmniOps...")
+
+    # 取消消费者任务
+    for task in consumer_tasks:
+        task.cancel()
+    if consumer_tasks:
+        await asyncio.gather(*consumer_tasks, return_exceptions=True)
+
+    try:
+        from omniops.mq import close_connection
+        await close_connection()
+    except Exception:
+        pass
+
     try:
         await close_db()
     except Exception:
@@ -63,6 +107,14 @@ async def lifespan(app: FastAPI):
         await redis_store.close()
     except Exception:
         pass
+
+    # 关闭事件发布器
+    try:
+        from omniops.events.publisher import close_publisher
+        await close_publisher()
+    except Exception:
+        pass
+
     logger.info("OmniOps shutdown complete")
 
 

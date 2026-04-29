@@ -11,6 +11,7 @@ from omniops.ingestion.csv_parser import ingest_csv
 from omniops.memory.db_store import get_db_session_store
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.memory.store import generate_session_id
+from omniops.events.publisher import get_publisher
 from omniops.models import (
     FeedbackRequest,
     InputType,
@@ -71,24 +72,65 @@ async def create_session(file: UploadFile = File(...)):
         input_type=input_type,
         structured_data=records,
         status=SessionStatus.ANALYZING,
+        current_step="init",
     )
 
-    # 预处理：感知 Agent
+    # 预处理：感知 Agent（同步执行，保持冷启动简单）
     perception = PerceptionAgent()
     await perception.process(session)
+
+    # 感知完成 → 状态机推进
+    session.status = SessionStatus.PERCEIVED
+    session.current_step = "perceived"
 
     # 路由决策
     router_instance = ContextRouter()
     mode = router_instance.decide_mode(session)
-    agent_chain = router_instance.build_agent_chain(mode)
 
-    # 执行 Agent 链路
-    for agent_name in agent_chain:
+    # 存储会话（优先 Redis，备选内存）
+    try:
+        redis_store = await get_redis_session_store()
+        await redis_store.create(session)
+        logger.info(f"Session {session_id} stored in Redis, status=PERCEIVED")
+    except Exception as e:
+        logger.warning(f"Redis storage failed, using in-memory: {e}")
+        from omniops.memory.store import get_session_store
+        memory_store = get_session_store()
+        memory_store.create(session)
+
+    # 发布诊断事件（异步链路从这里开始）
+    try:
+        publisher = await get_publisher()
+        await publisher.publish_diagnosis_requested(session)
+    except Exception as pub_err:
+        logger.warning(f"Event publish failed, falling back to in-process chain: {pub_err}")
+        # 降级：同步执行剩余链路
+        await _run_agent_chain_sync(session, mode, router_instance)
+
+    # 估算时间
+    estimated = 30 if mode == AgentMode.SINGLE else 60
+
+    return SessionCreateResponse(
+        session_id=session_id,
+        status=SessionStatus.PERCEIVED,
+        estimated_seconds=estimated,
+    )
+
+
+async def _run_agent_chain_sync(
+    session,
+    mode: AgentMode,
+    router: ContextRouter,
+) -> None:
+    """同步执行剩余 Agent 链路（RabbitMQ 不可用时的降级路径）"""
+    chain = router.build_agent_chain(mode)
+
+    for agent_name in chain:
         if agent_name == "perception":
             continue  # 已执行
 
         elif agent_name == "diagnosis":
-            agent = DiagnosisAgent(model_name=settings.anthropic_model)
+            agent = DiagnosisAgent()
             await agent.process(session)
 
         elif agent_name == "impact":
@@ -99,36 +141,25 @@ async def create_session(file: UploadFile = File(...)):
             agent = PlanningAgent()
             await agent.process(session)
 
-        # 记录链路
-        if session.diagnosis_result:
-            session.diagnosis_result.agent_chain.append(agent_name)
+        # 状态机推进
+        next_step = router.route_after_agent(session, agent_name)
 
-    # 更新会话状态
-    if router_instance.should_trigger_hitl(session):
-        session.status = SessionStatus.NEEDS_REVIEW
-    else:
-        session.status = SessionStatus.COMPLETED
+        # 持久化中间状态
+        try:
+            redis_store = await get_redis_session_store()
+            await redis_store.update(
+                session.session_id,
+                status=session.status,
+                current_step=session.current_step,
+                diagnosis_result=session.diagnosis_result,
+                impact=session.impact,
+                suggestion=session.suggestion,
+            )
+        except Exception:
+            pass
 
-    # 存储会话（优先 Redis，备选内存）
-    try:
-        redis_store = await get_redis_session_store()
-        await redis_store.create(session)
-        logger.info(f"Session {session_id} stored in Redis")
-    except Exception as e:
-        logger.warning(f"Redis storage failed, using in-memory: {e}")
-        # 降级到内存存储
-        from omniops.memory.store import get_session_store
-        memory_store = get_session_store()
-        memory_store.create(session)
-
-    # 估算时间
-    estimated = 30 if mode == AgentMode.SINGLE else 60
-
-    return SessionCreateResponse(
-        session_id=session_id,
-        status=session.status,
-        estimated_seconds=estimated,
-    )
+        if session.status in (SessionStatus.COMPLETED, SessionStatus.RESOLVED):
+            break
 
 
 @router.get("/sessions/{session_id}")
@@ -243,6 +274,18 @@ async def submit_feedback(session_id: str, feedback: FeedbackRequest):
                 )
             except Exception as e:
                 logger.warning(f"DB feedback save failed: {e}")
+
+            # 发布反馈事件（触发知识闭环）
+            try:
+                publisher = await get_publisher()
+                await publisher.publish_human_feedback_received(
+                    session_id=session_id,
+                    decision=feedback.decision.value,
+                    actual_action=feedback.actual_action,
+                    effectiveness=feedback.effectiveness.value,
+                )
+            except Exception as pub_err:
+                logger.warning(f"Feedback event publish failed: {pub_err}")
 
             return {"message": "反馈已提交", "status": session.status}
     except Exception:

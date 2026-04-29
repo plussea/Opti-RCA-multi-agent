@@ -178,7 +178,7 @@ class SQLiteVectorStore:
                 ORDER BY match_count DESC, e.hit_count DESC
                 LIMIT ?
                 """,
-                params + params + [top_k],
+                params + [top_k],
             )
 
         results = []

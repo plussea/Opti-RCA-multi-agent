@@ -7,7 +7,7 @@ from omniops.core.llm_client import (
     DIAGNOSIS_SYSTEM_PROMPT,
     DIAGNOSIS_USER_TEMPLATE,
     get_alarm_dict_text,
-    get_llm_client,
+    get_llm_client as _get_llm_client,
 )
 from omniops.models import CognitiveSummary, DiagnosisResult, Evidence, Session
 from omniops.rag import search_similar_cases
@@ -50,11 +50,10 @@ class DiagnosisAgent(BaseAgent):
         # 尝试规则匹配
         root_cause, confidence, evidence = self._rule_based_diagnosis(records, alarm_codes)
 
-        # 如果有 LLM API Key，尝试 LLM 增强
-        from omniops.core.config import get_settings
-        settings = get_settings()
-
-        if settings.anthropic_api_key:
+        # 如果配置了 LLM provider，尝试 LLM 增强
+        try:
+            from omniops.core.providers import get_provider
+            provider = get_provider()
             try:
                 llm_result = await self._llm_diagnosis(
                     records=records,
@@ -68,6 +67,8 @@ class DiagnosisAgent(BaseAgent):
                         evidence = [Evidence(**e) for e in llm_result["evidence"]]
             except Exception as e:
                 logger.warning(f"LLM diagnosis failed, falling back to rules: {e}")
+        except Exception:
+            pass  # No LLM provider configured, skip
 
         # 构建诊断结果
         diagnosis = DiagnosisResult(
@@ -120,8 +121,9 @@ class DiagnosisAgent(BaseAgent):
                 alarm_dict=get_alarm_dict_text(),
             )
 
-            llm_client = get_llm_client()
-            result = await llm_client.generate_json(
+            from omniops.core.providers import get_provider
+            provider = get_provider()
+            result = await provider.generate_json(
                 system=DIAGNOSIS_SYSTEM_PROMPT,
                 user_message=user_message,
             )

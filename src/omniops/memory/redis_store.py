@@ -79,6 +79,7 @@ class RedisSessionStore:
             "suggestion": json.dumps(session.suggestion.model_dump()) if session.suggestion else None,
             "human_feedback": json.dumps(session.human_feedback) if session.human_feedback else None,
             "perception_metadata": json.dumps(session.perception_metadata) if session.perception_metadata else None,
+            "current_step": session.current_step,
             "created_at": session.created_at.isoformat(),
         }
 
@@ -159,6 +160,7 @@ class RedisSessionStore:
             human_feedback=json.loads(data["human_feedback"]) if data.get("human_feedback") else None,
             perception_metadata=json.loads(data["perception_metadata"]) if data.get("perception_metadata") else None,
             status=SessionStatus(data["status"]),
+            current_step=data.get("current_step", "init"),
             created_at=parse_date(data["created_at"]),
         )
 
@@ -170,6 +172,8 @@ class RedisSessionStore:
         if "status" in updates:
             status = updates["status"]
             update_data["status"] = status.value if hasattr(status, 'value') else str(status)
+        if "current_step" in updates:
+            update_data["current_step"] = updates["current_step"]
         if "diagnosis_result" in updates:
             update_data["diagnosis_result"] = json.dumps(updates["diagnosis_result"].model_dump()) if updates["diagnosis_result"] else None
         if "impact" in updates:
@@ -178,6 +182,8 @@ class RedisSessionStore:
             update_data["suggestion"] = json.dumps(updates["suggestion"].model_dump()) if updates["suggestion"] else None
         if "human_feedback" in updates:
             update_data["human_feedback"] = json.dumps(updates["human_feedback"])
+        if "perception_metadata" in updates:
+            update_data["perception_metadata"] = json.dumps(updates["perception_metadata"])
 
         if update_data:
             await self.client.hset(self._session_key(session_id), mapping=update_data)
@@ -199,7 +205,10 @@ class RedisSessionStore:
         for key in keys:
             sid = key.replace(self.SESSION_PREFIX, "")
             session = await self.get(sid)
-            if session and session.status.value in ("analyzing", "needs_review"):
+            if session and session.status.value in (
+                "analyzing", "perceived", "diagnosing", "planning",
+                "verifying", "pending_human",
+            ):
                 sessions.append(session)
         return sessions
 

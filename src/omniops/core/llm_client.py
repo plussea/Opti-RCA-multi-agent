@@ -1,6 +1,11 @@
-"""LLM 客户端（支持 Anthropic 和 OpenAI）"""
+"""LLM 客户端（支持 Anthropic 和 OpenAI）
+
+.. deprecated::
+    Use :func:`omniops.core.providers.get_provider` instead.
+"""
 import json
 import logging
+import warnings
 from typing import Any, Dict, List, Optional
 
 import anthropic
@@ -159,7 +164,17 @@ _llm_client: Optional[LLMClient] = None
 
 
 def get_llm_client(provider: str = "anthropic") -> LLMClient:
-    """获取 LLM 客户端单例"""
+    """获取 LLM 客户端单例
+
+    .. deprecated::
+        Use :func:`omniops.core.providers.get_provider` instead.
+    """
+    warnings.warn(
+        "get_llm_client() is deprecated, use get_provider() from "
+        "omniops.core.providers instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     global _llm_client
     if _llm_client is None:
         _llm_client = LLMClient(provider=provider)

@@ -6,7 +6,6 @@ from omniops.agents.base import BaseAgent
 from omniops.core.llm_client import (
     PLANNING_SYSTEM_PROMPT,
     PLANNING_USER_TEMPLATE,
-    get_llm_client,
 )
 from omniops.models import CognitiveSummary, Session, Suggestion, SuggestionAction
 
@@ -41,18 +40,16 @@ class PlanningAgent(BaseAgent):
 
         # 尝试 LLM 生成
         suggestion = None
-        from omniops.core.config import get_settings
-        settings = get_settings()
-
-        if settings.anthropic_api_key:
-            try:
-                suggestion = await self._llm_planning(
-                    root_cause=root_cause,
-                    confidence=confidence,
-                    impact_text=impact_text,
-                )
-            except Exception as e:
-                logger.warning(f"LLM planning failed, falling back to template: {e}")
+        try:
+            from omniops.core.providers import get_provider
+            provider = get_provider()
+            suggestion = await self._llm_planning(
+                root_cause=root_cause,
+                confidence=confidence,
+                impact_text=impact_text,
+            )
+        except Exception as e:
+            logger.warning(f"LLM planning failed, falling back to template: {e}")
 
         # 如果 LLM 失败，使用模板
         if not suggestion:
@@ -91,8 +88,9 @@ class PlanningAgent(BaseAgent):
                 impact=impact_text or "暂无影响评估信息",
             )
 
-            llm_client = get_llm_client()
-            result = await llm_client.generate_json(
+            from omniops.core.providers import get_provider
+            provider = get_provider()
+            result = await provider.generate_json(
                 system=PLANNING_SYSTEM_PROMPT,
                 user_message=user_message,
             )

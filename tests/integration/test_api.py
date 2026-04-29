@@ -28,7 +28,7 @@ class TestSessionCreation:
         assert response.status_code == 200
         data = response.json()
         assert "session_id" in data
-        assert data["status"] in ("analyzing", "completed", "needs_review")
+        assert data["status"] in ("analyzing", "perceived", "completed", "needs_review")
 
     def test_create_session_empty_csv(self, client):
         csv_content = b"ne_name,alarm_code\n"
