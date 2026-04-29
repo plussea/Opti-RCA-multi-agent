@@ -22,7 +22,16 @@
       "Bash(uv add *)",
       "Bash(uv pip *)",
       "Bash(uv run *)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(where gh *)",
+      "Read(//c//**)",
+      "Read(//c/Users/Plussea/AppData/Local/GitHub/**)",
+      "Read(//c/Users/Plussea/AppData/Local/Programs/**)",
+      "Read(//c/Program Files/GitHub CLI//**)",
+      "Bash(find /c -name \"gh.exe\" -path \"*GitHub*\")",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 /c/Program Files/GitHub CLI/gh.exe auth *)",
+      "Bash(HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 /c/Program Files/GitHub CLI/gh.exe issue *)"
     ]
   }
 }

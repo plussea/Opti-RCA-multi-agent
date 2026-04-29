@@ -104,9 +104,9 @@ class VerificationAgent(BaseAgent):
 
         # Determine next step based on checks
         if all_passed:
-            next_step = "pending_human"
+            next_step = "resolved"
         else:
-            # 校验失败，降级但仍标记需人工
+            # 校验失败，降级到人工审核
             next_step = "pending_human"
 
         return CognitiveSummary(

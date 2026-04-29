@@ -4,6 +4,7 @@ import logging
 from omniops.agents import ImpactAgent, PlanningAgent
 from omniops.events.schemas import PlanningRequestedEvent, VerificationRequestedEvent
 from omniops.memory.redis_store import get_redis_session_store
+from omniops.models import SessionStatus
 from omniops.mq import BaseConsumer
 from omniops.router.context_router import ContextRouter
 

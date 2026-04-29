@@ -4,7 +4,7 @@ from typing import Dict
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
-from omniops.agents import DiagnosisAgent, ImpactAgent, PerceptionAgent, PlanningAgent
+from omniops.agents import DiagnosisAgent, ImpactAgent, PerceptionAgent, PlanningAgent, VerificationAgent
 from omniops.core.config import get_settings
 from omniops.core.file_storage import get_file_storage
 from omniops.ingestion.csv_parser import ingest_csv
@@ -139,6 +139,10 @@ async def _run_agent_chain_sync(
 
         elif agent_name == "planning":
             agent = PlanningAgent()
+            await agent.process(session)
+
+        elif agent_name == "verification":
+            agent = VerificationAgent()
             await agent.process(session)
 
         # 状态机推进

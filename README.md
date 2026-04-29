@@ -20,7 +20,7 @@
 
 ## What is OmniOps?
 
-OmniOps automates the root cause analysis and remediation planning for optical network alarms. Engineers upload alarm CSVs or OCR-extracted screenshots; a Multi-Agent pipeline of **Perception → Diagnosis → Impact → Planning → Verification** analyzes the fault, generates structured fix suggestions, and triggers human review for high-risk actions. After execution, feedback闭环回写到 a RAG knowledge base for continuous learning.
+OmniOps automates the root cause analysis and remediation planning for optical network alarms. Engineers upload alarm CSVs or OCR-extracted screenshots; a Multi-Agent pipeline of **Perception → Diagnosis → Impact → Planning → Verification** analyzes the fault, generates structured fix suggestions, and triggers human review for high-risk actions. After execution, the feedback loop is written back to a RAG knowledge base for continuous learning.
 
 **No more hunting through logs.** Just upload the alarm data and get an actionable fix plan.
 
