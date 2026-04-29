@@ -103,11 +103,7 @@ class VerificationAgent(BaseAgent):
         all_passed = all(c.get("passed", False) for c in checks)
 
         # Determine next step based on checks
-        if all_passed:
-            next_step = "resolved"
-        else:
-            # 校验失败，降级到人工审核
-            next_step = "pending_human"
+        next_step = "resolved" if all_passed else "pending_human"
 
         return CognitiveSummary(
             from_agent=self.name,

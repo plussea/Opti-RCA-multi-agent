@@ -1,17 +1,21 @@
 """API 路由（异步版本）"""
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, UploadFile, status
 
-from omniops.agents import DiagnosisAgent, ImpactAgent, PerceptionAgent, PlanningAgent, VerificationAgent
-from omniops.core.config import get_settings
+from omniops.agents import (
+    DiagnosisAgent,
+    ImpactAgent,
+    PerceptionAgent,
+    PlanningAgent,
+    VerificationAgent,
+)
 from omniops.core.file_storage import get_file_storage
+from omniops.events.publisher import get_publisher
 from omniops.ingestion.csv_parser import ingest_csv
-from omniops.memory.db_store import get_db_session_store
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.memory.store import generate_session_id
-from omniops.events.publisher import get_publisher
 from omniops.models import (
     FeedbackRequest,
     InputType,
@@ -28,9 +32,10 @@ router = APIRouter(prefix="/v1", tags=["sessions"])
 
 
 @router.post("/sessions", response_model=SessionCreateResponse)
-async def create_session(file: UploadFile = File(...)):
+async def create_session(file: Optional[UploadFile] = None):
     """创建新诊断会话"""
-    settings = get_settings()
+    if file is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="file is required")
     storage = get_file_storage()
 
     content = await file.read()
@@ -58,7 +63,7 @@ async def create_session(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"CSV 解析失败: {str(e)}",
-        )
+        ) from e
 
     if not records:
         raise HTTPException(
@@ -146,7 +151,7 @@ async def _run_agent_chain_sync(
             await agent.process(session)
 
         # 状态机推进
-        next_step = router.route_after_agent(session, agent_name)
+        router.route_after_agent(session, agent_name)
 
         # 持久化中间状态
         try:
@@ -225,11 +230,6 @@ def _build_result_response(session: Session) -> Dict:
         rows_extracted=len(session.structured_data),
         uncertain_fields=[],
     )
-
-    # 从 structured_data 中提取告警码
-    alarm_codes = list(set(
-        r.alarm_code for r in session.structured_data if r.alarm_code
-    ))
 
     return {
         "session_id": session.session_id,

@@ -1,9 +1,7 @@
 """Base consumer class for all MQ consumers"""
-import asyncio
 import json
 import logging
 from abc import abstractmethod
-from typing import Optional
 
 from omniops.events.schemas import BaseEvent
 from omniops.memory.redis_store import get_redis_session_store

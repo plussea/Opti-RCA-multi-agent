@@ -1,8 +1,7 @@
 """Human Review Consumer — 监听人工审核队列，处理超时/反馈"""
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
 
 from omniops.events.schemas import HumanFeedbackReceivedEvent, HumanReviewRequiredEvent
 from omniops.memory.redis_store import get_redis_session_store
@@ -25,7 +24,6 @@ class HumanReviewConsumer(BaseConsumer):
         self._pending: dict = {}  # session_id → timeout_task
 
     async def handle_event(self, event) -> None:
-        from omniops.events.schemas import BaseEvent
 
         if isinstance(event, HumanReviewRequiredEvent):
             await self._handle_review_required(event)

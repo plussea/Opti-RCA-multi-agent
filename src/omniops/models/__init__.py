@@ -1,4 +1,5 @@
 """数据模型层"""
+from omniops.models.knowledge import CognitiveSummary
 from omniops.models.session import (
     AlarmRecord,
     DiagnosisResult,
@@ -17,7 +18,6 @@ from omniops.models.session import (
     Suggestion,
     SuggestionAction,
 )
-from omniops.models.knowledge import CognitiveSummary
 
 __all__ = [
     "AlarmRecord",

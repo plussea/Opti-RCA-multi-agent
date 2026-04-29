@@ -1,5 +1,4 @@
 """上下文路由器测试"""
-import pytest
 
 from omniops.memory.store import generate_session_id
 from omniops.models import AlarmRecord, Session, SessionStatus

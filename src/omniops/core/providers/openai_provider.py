@@ -1,4 +1,6 @@
 """OpenAI-compatible provider (uses openai SDK)"""
+from typing import Any, Dict
+
 from omniops.core.providers import BaseProvider, ProviderConfig, register
 
 try:

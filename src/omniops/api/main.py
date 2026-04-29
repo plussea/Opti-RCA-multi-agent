@@ -1,7 +1,7 @@
 """FastAPI 应用入口"""
 import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
 
     # 设置日志级别
     import sys
+
     from loguru import logger as loguru_logger
     loguru_logger.remove()
     loguru_logger.add(sys.stderr, level=settings.log_level)
@@ -52,13 +53,13 @@ async def lifespan(app: FastAPI):
     # 启动 RabbitMQ 消费者
     consumer_tasks: list = []
     try:
-        from omniops.mq import setup_mq
         from omniops.consumers import (
+            ClosureConsumer,
             DiagnosisConsumer,
             PlanningConsumer,
             VerificationConsumer,
-            ClosureConsumer,
         )
+        from omniops.mq import setup_mq
 
         await setup_mq()
         logger.info("RabbitMQ exchanges and queues declared")
@@ -99,10 +100,9 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
 
-    try:
+    with suppress(Exception):
         await close_db()
-    except Exception:
-        pass
+
     try:
         redis_store = await get_redis_session_store()
         await redis_store.close()

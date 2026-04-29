@@ -2,13 +2,12 @@
 import re
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from omniops.core.encoding import detect_encoding
-from omniops.models import AlarmRecord, InputType, Severity
-
+from omniops.models import AlarmRecord, Severity
 
 # 表头标准化映射
 HEADER_MAPPINGS: Dict[str, str] = {
@@ -58,7 +57,6 @@ SEVERITY_MAPPINGS: Dict[str, Severity] = {
     "严重": Severity.CRITICAL,
     "major": Severity.MAJOR,
     "重要": Severity.MAJOR,
-    "major": Severity.MAJOR,
     "minor": Severity.MINOR,
     "次要": Severity.MINOR,
     "warning": Severity.WARNING,

@@ -31,7 +31,10 @@
       "Bash(find /c -name \"gh.exe\" -path \"*GitHub*\")",
       "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
       "Bash(HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 /c/Program Files/GitHub CLI/gh.exe auth *)",
-      "Bash(HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 /c/Program Files/GitHub CLI/gh.exe issue *)"
+      "Bash(HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 /c/Program Files/GitHub CLI/gh.exe issue *)",
+      "Bash(sed -n '108,114p' E:/2026-files/muti-agent-rca/src/omniops/core/llm_client.py)",
+      "Bash(python -c ' *)",
+      "Bash(sed -n '88,95p' E:/2026-files/muti-agent-rca/src/omniops/core/providers/base.py)"
     ]
   }
 }

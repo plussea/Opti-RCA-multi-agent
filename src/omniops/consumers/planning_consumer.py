@@ -2,11 +2,10 @@
 import logging
 
 from omniops.agents import ImpactAgent, PlanningAgent
-from omniops.events.schemas import PlanningRequestedEvent, VerificationRequestedEvent
+from omniops.events.schemas import PlanningRequestedEvent
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.models import SessionStatus
 from omniops.mq import BaseConsumer
-from omniops.router.context_router import ContextRouter
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,6 @@ class PlanningConsumer(BaseConsumer):
             publisher = await get_publisher()
 
             # 路由决定下一步
-            router = ContextRouter()
             suggestion = session.suggestion
             if suggestion and suggestion.needs_approval:
                 session.current_step = "pending_human"

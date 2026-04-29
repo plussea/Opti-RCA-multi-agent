@@ -1,5 +1,4 @@
 """CSV 解析器测试"""
-import pytest
 
 from omniops.ingestion.csv_parser import (
     ingest_csv,
@@ -89,7 +88,7 @@ class TestIngestCSV:
         assert records[0].severity.value == "Critical"
 
     def test_heterogeneous_headers(self):
-        content = "网元名称,告警码,告警,级别,发生时间\nNE-SH-01,LOS,LOS,严重,2026/04/28 15:00:00".encode("utf-8")
+        content = "网元名称,告警码,告警,级别,发生时间\nNE-SH-01,LOS,LOS,严重,2026/04/28 15:00:00".encode()
         records, uncertain = ingest_csv(content)
 
         assert len(records) == 1

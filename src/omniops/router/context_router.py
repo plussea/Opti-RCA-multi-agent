@@ -41,17 +41,10 @@ class ContextRouter:
     def should_trigger_hitl(self, session: Session) -> bool:
         """判断是否需要人工介入"""
         # 高危告警
-        if session.diagnosis_result:
-            if session.diagnosis_result.confidence < 0.7:
-                return True
+        if session.diagnosis_result and session.diagnosis_result.confidence < 0.7:
+            return True
 
         # 严重级别告警
-        severity_map = {
-            "Critical": 4,
-            "Major": 3,
-            "Minor": 2,
-            "Warning": 1,
-        }
         if hasattr(session, "perception_metadata") and session.perception_metadata:
             sev_counts = session.perception_metadata.get("severity_counts", {})
             if sev_counts.get("Critical", 0) > 0:
@@ -80,7 +73,6 @@ class ContextRouter:
         perceived  → diagnosis → impact → planning → verification → pending_human
         diagnosing → (after completion) → route based on mode
         """
-        step = session.current_step
         mode = self.decide_mode(session)
 
         if completed_agent == "perception":

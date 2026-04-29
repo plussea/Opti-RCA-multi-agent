@@ -1,5 +1,4 @@
 """Tests for session state machine transitions"""
-import pytest
 
 from omniops.models import Session, SessionStatus
 from omniops.router.context_router import AgentMode, ContextRouter

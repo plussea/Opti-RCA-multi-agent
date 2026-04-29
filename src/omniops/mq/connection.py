@@ -1,6 +1,9 @@
 """RabbitMQ connection management"""
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    import aio_pika
 
 logger = logging.getLogger(__name__)
 

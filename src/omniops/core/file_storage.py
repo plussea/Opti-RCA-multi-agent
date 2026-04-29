@@ -1,6 +1,5 @@
 """文件存储服务"""
 import logging
-import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -44,10 +43,7 @@ class FileStorage:
         unique_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}{ext}"
 
         # 确定目录
-        if session_id:
-            subdir = self.upload_dir / session_id
-        else:
-            subdir = self.upload_dir / "unknown"
+        subdir = self.upload_dir / session_id if session_id else self.upload_dir / "unknown"
 
         subdir.mkdir(parents=True, exist_ok=True)
 

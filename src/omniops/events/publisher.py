@@ -95,9 +95,7 @@ class OmniOpsPublisher:
 
     async def publish_diagnosis_requested(self, session) -> None:
         from omniops.events.schemas import DiagnosisRequestedEvent
-        alarm_codes = list(set(
-            r.alarm_code for r in session.structured_data if r.alarm_code
-        ))
+        alarm_codes = {r.alarm_code for r in session.structured_data if r.alarm_code}
         event = DiagnosisRequestedEvent(
             session_id=session.session_id,
             alarm_codes=alarm_codes,

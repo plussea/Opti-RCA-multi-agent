@@ -1,14 +1,11 @@
 """Tests for event schemas and serialization"""
-import pytest
 from datetime import datetime
 
 from omniops.events.schemas import (
-    BaseEvent,
-    DiagnosisRequestedEvent,
     DiagnosisCompletedEvent,
-    PlanningRequestedEvent,
-    HumanReviewRequiredEvent,
+    DiagnosisRequestedEvent,
     HumanFeedbackReceivedEvent,
+    HumanReviewRequiredEvent,
     KnowledgeClosureRequestedEvent,
     SessionResolvedEvent,
 )

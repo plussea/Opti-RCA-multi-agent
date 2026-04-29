@@ -42,7 +42,7 @@ class PlanningAgent(BaseAgent):
         suggestion = None
         try:
             from omniops.core.providers import get_provider
-            provider = get_provider()
+            get_provider()
             suggestion = await self._llm_planning(
                 root_cause=root_cause,
                 confidence=confidence,

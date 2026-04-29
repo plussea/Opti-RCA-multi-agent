@@ -87,7 +87,7 @@ class TestImpactAgent:
         })()
 
         agent = ImpactAgent()
-        summary = await agent.process(session)
+        await agent.process(session)
 
         assert session.impact is not None
         assert len(session.impact.affected_ne) == 1
@@ -112,7 +112,7 @@ class TestPlanningAgent:
         })()
 
         agent = PlanningAgent()
-        summary = await agent.process(session)
+        await agent.process(session)
 
         assert session.suggestion is not None
         assert len(session.suggestion.suggested_actions) > 0

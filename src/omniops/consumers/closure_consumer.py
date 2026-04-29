@@ -51,7 +51,6 @@ class ClosureConsumer(BaseConsumer):
                 mttr_seconds = int((datetime.utcnow() - session.created_at).total_seconds())
 
             # 更新 session 为终态
-            final_status = feedback.get("decision") == "adopted" and "resolved" or "rejected"
             await store.update(
                 session_id,
                 status=SessionStatus.RESOLVED,

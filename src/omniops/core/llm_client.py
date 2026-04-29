@@ -8,7 +8,6 @@ import logging
 import warnings
 from typing import Any, Dict, List, Optional
 
-import anthropic
 from anthropic import Anthropic
 
 from omniops.core.config import get_settings
@@ -109,7 +108,7 @@ class LLMClient:
             if json_match:
                 return json.loads(json_match.group(0))
 
-            raise ValueError(f"Failed to parse JSON from response: {response_text}")
+            raise ValueError(f"Failed to parse JSON from response: {response_text}") from None
 
     async def chat(
         self,

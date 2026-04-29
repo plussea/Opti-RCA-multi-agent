@@ -1,13 +1,9 @@
 """诊断 Agent Consumer — 消费 diagnosis_requested 事件"""
 import logging
-from typing import List
 
 from omniops.agents import DiagnosisAgent
 from omniops.events.schemas import (
-    DiagnosisCompletedEvent,
     DiagnosisRequestedEvent,
-    ImpactRequestedEvent,
-    PlanningRequestedEvent,
 )
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.models import SessionStatus

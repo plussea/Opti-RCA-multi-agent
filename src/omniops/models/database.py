@@ -1,16 +1,14 @@
 """数据库模型层"""
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import (
-    Boolean,
+    JSON,
     Column,
     DateTime,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
 )

@@ -1,11 +1,8 @@
 """SQLite 向量存储和 RAG 检索（Demo 级，无需额外依赖）"""
 import json
 import logging
-import os
-import shutil
 import sqlite3
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from omniops.core.config import get_settings

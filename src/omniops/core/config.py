@@ -1,8 +1,7 @@
 """系统配置"""
-import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict

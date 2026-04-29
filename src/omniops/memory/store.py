@@ -2,7 +2,7 @@
 import threading
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from omniops.models import Session, SessionStatus
 

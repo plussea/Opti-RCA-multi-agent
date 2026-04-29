@@ -1,5 +1,4 @@
 """认知摘要协议 — Agent 间通信标准格式"""
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field

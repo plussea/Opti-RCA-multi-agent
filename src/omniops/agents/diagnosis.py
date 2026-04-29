@@ -7,7 +7,6 @@ from omniops.core.llm_client import (
     DIAGNOSIS_SYSTEM_PROMPT,
     DIAGNOSIS_USER_TEMPLATE,
     get_alarm_dict_text,
-    get_llm_client as _get_llm_client,
 )
 from omniops.models import CognitiveSummary, DiagnosisResult, Evidence, Session
 from omniops.rag import search_similar_cases
@@ -53,7 +52,7 @@ class DiagnosisAgent(BaseAgent):
         # 如果配置了 LLM provider，尝试 LLM 增强
         try:
             from omniops.core.providers import get_provider
-            provider = get_provider()
+            get_provider()
             try:
                 llm_result = await self._llm_diagnosis(
                     records=records,

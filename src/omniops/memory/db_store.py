@@ -1,11 +1,9 @@
 """异步会话存储（PostgreSQL）"""
-import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from omniops.core.database import async_session_maker, init_db
 from omniops.models import Session, SessionStatus
@@ -31,8 +29,8 @@ class DBSessionStore:
         # 转换告警记录
         records = []
         for r in model.alarm_records:
+
             from omniops.models import AlarmRecord, Severity
-            from dateutil.parser import parse as parse_date
 
             alarm_record = AlarmRecord(
                 ne_name=r.ne_name,
@@ -204,6 +202,7 @@ class DBSessionStore:
 
             # 重新加载告警记录
             from sqlalchemy import select as sa_select
+
             from omniops.models.database import AlarmRecordModel
 
             alarm_stmt = sa_select(AlarmRecordModel).where(

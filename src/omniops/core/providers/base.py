@@ -3,9 +3,7 @@ import json
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
-import httpx
+from typing import Any, Dict
 
 
 @dataclass(frozen=True)
@@ -89,7 +87,7 @@ class BaseProvider(ABC):
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if match:
                 return json.loads(match.group(0))
-            raise ValueError(f"Failed to parse JSON from response: {content}")
+            raise ValueError(f"Failed to parse JSON from response: {content}") from None
 
     @abstractmethod
     async def _do_request(

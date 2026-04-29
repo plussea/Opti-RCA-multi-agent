@@ -1,9 +1,6 @@
 """会话存储测试"""
-import time
 import threading
 from datetime import datetime, timedelta
-
-import pytest
 
 from omniops.memory.store import (
     InMemorySessionStore,

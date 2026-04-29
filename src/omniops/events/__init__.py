@@ -1,15 +1,15 @@
 """OmniOps Event schemas"""
 from omniops.events.schemas import (  # noqa: F401
     BaseEvent,
-    DiagnosisRequestedEvent,
     DiagnosisCompletedEvent,
+    DiagnosisRequestedEvent,
+    HumanFeedbackReceivedEvent,
+    HumanReviewRequiredEvent,
     ImpactRequestedEvent,
-    PlanningRequestedEvent,
+    KnowledgeClosureRequestedEvent,
     PlanningCompletedEvent,
+    PlanningRequestedEvent,
+    SessionResolvedEvent,
     VerificationRequestedEvent,
     VerificationResultEvent,
-    HumanReviewRequiredEvent,
-    HumanFeedbackReceivedEvent,
-    KnowledgeClosureRequestedEvent,
-    SessionResolvedEvent,
 )

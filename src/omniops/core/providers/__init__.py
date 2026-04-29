@@ -73,10 +73,9 @@ def _build_provider(name: str) -> BaseProvider:
 def _build_anthropic(settings) -> BaseProvider:
     """Build Anthropic provider (uses official SDK)"""
     try:
-        import anthropic
-        anthropic  # silence linter
+        import anthropic  # noqa: F401
     except ImportError:
-        raise ImportError("anthropic package not installed. Run: pip install anthropic")
+        raise ImportError("anthropic package not installed. Run: pip install anthropic") from None
 
     from omniops.core.providers.base import ProviderConfig
 
@@ -96,6 +95,7 @@ def _build_anthropic(settings) -> BaseProvider:
 @lru_cache
 def _anthropic_client():
     import anthropic
+
     from omniops.core.config import get_settings
     settings = get_settings()
     return anthropic.Anthropic(api_key=settings.anthropic_api_key)
@@ -127,8 +127,8 @@ class AnthropicProvider(BaseProvider):
 
 
 def _build_openai(settings) -> BaseProvider:
-    from omniops.core.providers.openai_provider import OpenAIProvider
     from omniops.core.providers.base import ProviderConfig
+    from omniops.core.providers.openai_provider import OpenAIProvider
 
     config = ProviderConfig(
         api_key=settings.openai_api_key,
@@ -141,8 +141,8 @@ def _build_openai(settings) -> BaseProvider:
 
 
 def _build_openrouter(settings) -> BaseProvider:
-    from omniops.core.providers.openrouter_provider import OpenRouterProvider
     from omniops.core.providers.base import ProviderConfig
+    from omniops.core.providers.openrouter_provider import OpenRouterProvider
 
     config = ProviderConfig(
         api_key=settings.openrouter_api_key,
@@ -155,8 +155,8 @@ def _build_openrouter(settings) -> BaseProvider:
 
 
 def _build_minimax(settings) -> BaseProvider:
-    from omniops.core.providers.minimax_provider import MiniMaxProvider
     from omniops.core.providers.base import ProviderConfig
+    from omniops.core.providers.minimax_provider import MiniMaxProvider
 
     config = ProviderConfig(
         api_key=settings.minimax_api_key,
@@ -170,9 +170,11 @@ def _build_minimax(settings) -> BaseProvider:
 
 
 # Import all providers to trigger @register decorators
-from omniops.core.providers import openai_provider  # noqa: F401, E402
-from omniops.core.providers import openrouter_provider  # noqa: F401, E402
-from omniops.core.providers import minimax_provider  # noqa: F401, E402
+from omniops.core.providers import (  # noqa: E402
+    minimax_provider,  # noqa: F401
+    openai_provider,  # noqa: F401
+    openrouter_provider,  # noqa: F401
+)
 
 __all__ = [
     "BaseProvider",

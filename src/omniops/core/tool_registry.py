@@ -29,7 +29,7 @@ class ToolRegistry:
             return
 
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 self._tools = data.get("tools", {})
                 logger.info(f"Loaded {len(self._tools)} tools from registry")

@@ -1,8 +1,8 @@
 """Redis 会话存储（缓存层）"""
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import timedelta
+from typing import List, Optional
 
 import redis.asyncio as redis
 
@@ -97,12 +97,22 @@ class RedisSessionStore:
         if not data:
             return None
 
-        from omniops.models import (
-            AlarmRecord, DiagnosisResult, Evidence, Impact,
-            InputType, Session as SessionModel, SessionStatus, Severity,
-            Suggestion, SuggestionAction,
-        )
         from dateutil.parser import parse as parse_date
+
+        from omniops.models import (
+            AlarmRecord,
+            DiagnosisResult,
+            Evidence,
+            Impact,
+            InputType,
+            SessionStatus,
+            Severity,
+            Suggestion,
+            SuggestionAction,
+        )
+        from omniops.models import (
+            Session as SessionModel,
+        )
 
         # 解析告警记录
         records = []
