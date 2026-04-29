@@ -1,31 +1,22 @@
-"""诊断 Agent"""
-from typing import Any, Dict, List, Optional, Tuple
+"""诊断 Agent（LLM 增强版）"""
+import logging
+from typing import Any, Dict, List, Optional
 
 from omniops.agents.base import BaseAgent
+from omniops.core.llm_client import (
+    DIAGNOSIS_SYSTEM_PROMPT,
+    DIAGNOSIS_USER_TEMPLATE,
+    get_alarm_dict_text,
+    get_llm_client,
+)
 from omniops.models import CognitiveSummary, DiagnosisResult, Evidence, Session
+from omniops.rag import search_similar_cases
 
-
-DIAGNOSIS_PROMPT_TEMPLATE = """你是一名资深光网络运维专家，擅长通过告警关联分析定位根因。
-
-已收到以下标准化告警表：
-{alarms}
-
-历史相似案例（参考）：
-{similar_cases}
-
-请按以下步骤分析：
-1. 识别告警模式（单点故障/多点级联/性能劣化）
-2. 关联告警码与常见根因
-3. 给出最可能的根因（简洁描述）
-4. 评估置信度（0-1）
-5. 列出关键证据
-
-请以 JSON 格式输出诊断结果，包含：root_cause, confidence (0-1), evidence 列表
-"""
+logger = logging.getLogger(__name__)
 
 
 class DiagnosisAgent(BaseAgent):
-    """诊断 Agent：基于规则 + LLM 推理进行根因分析"""
+    """诊断 Agent：基于 LLM + 规则 + RAG 进行根因分析"""
 
     name = "diagnosis"
 
@@ -34,43 +25,55 @@ class DiagnosisAgent(BaseAgent):
         session: Session,
         context: Optional[Dict[str, Any]] = None,
     ) -> CognitiveSummary:
-        """分析告警表，输出根因假设"""
+        """分析告警表，输出根因假设（优先规则，辅以 LLM）"""
         records = session.structured_data
-        similar_cases = context.get("similar_cases", []) if context else []
-
-        # 告警码聚合分析
-        alarm_codes: Dict[str, int] = {}
-        for r in records:
-            code = r.alarm_code or r.alarm_name or "unknown"
-            alarm_codes[code] = alarm_codes.get(code, 0) + 1
 
         # 规则推理：基于已知告警码模式
+        alarm_codes = []
+        for r in records:
+            if r.alarm_code:
+                alarm_codes.append(r.alarm_code)
+
+        # 搜索相似案例
+        similar_cases = []
+        if alarm_codes:
+            try:
+                case_results = await search_similar_cases(
+                    query=" ".join(alarm_codes),
+                    alarm_codes=list(set(alarm_codes)),
+                    top_k=3,
+                )
+                similar_cases = case_results
+            except Exception as e:
+                logger.warning(f"RAG search failed: {e}")
+
+        # 尝试规则匹配
         root_cause, confidence, evidence = self._rule_based_diagnosis(records, alarm_codes)
 
-        # 如果有相似案例，提升置信度
-        if similar_cases:
-            avg_similarity = sum(getattr(c, "similarity", 0) for c in similar_cases) / max(len(similar_cases), 1)
-            confidence = min(confidence + avg_similarity * 0.1, 0.99)
+        # 如果有 LLM API Key，尝试 LLM 增强
+        from omniops.core.config import get_settings
+        settings = get_settings()
 
-        # 构建证据
-        evidence_list: List[Evidence] = []
-        for code, count in alarm_codes.items():
-            for r in records:
-                if (r.alarm_code == code or r.alarm_name == code) and len(evidence_list) < 10:
-                    evidence_list.append(
-                        Evidence(
-                            type="alarm",
-                            source=r.ne_name,
-                            code=code,
-                            time=r.occur_time.isoformat() if r.occur_time else None,
-                        )
-                    )
-                    break
+        if settings.anthropic_api_key:
+            try:
+                llm_result = await self._llm_diagnosis(
+                    records=records,
+                    similar_cases=similar_cases,
+                )
+                # 融合 LLM 结果和规则结果
+                if llm_result and llm_result.get("confidence", 0) > confidence:
+                    root_cause = llm_result["root_cause"]
+                    confidence = llm_result["confidence"]
+                    if llm_result.get("evidence"):
+                        evidence = [Evidence(**e) for e in llm_result["evidence"]]
+            except Exception as e:
+                logger.warning(f"LLM diagnosis failed, falling back to rules: {e}")
 
+        # 构建诊断结果
         diagnosis = DiagnosisResult(
             root_cause=root_cause,
             confidence=confidence,
-            evidence=evidence_list,
+            evidence=evidence,
             uncertainty=self._assess_uncertainty(records),
             agent_chain=[self.name],
         )
@@ -83,17 +86,57 @@ class DiagnosisAgent(BaseAgent):
             session_id=session.session_id,
             conclusion=root_cause,
             confidence=confidence,
-            evidence=[e.model_dump() for e in evidence_list],
+            evidence=[e.model_dump() for e in evidence],
             uncertainty=diagnosis.uncertainty,
             required_action="根据根因评估影响范围",
             context_window_used=len(records),
         )
 
+    async def _llm_diagnosis(
+        self,
+        records: List[Any],
+        similar_cases: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """使用 LLM 进行诊断"""
+        try:
+            # 构建告警表文本
+            alarms_text = "\n".join([
+                f"- {r.ne_name}: {r.alarm_code or r.alarm_name or 'unknown'} "
+                f"({r.severity.value if r.severity else 'unknown'}) "
+                f"at {r.occur_time or 'unknown'}"
+                for r in records
+            ])
+
+            # 构建相似案例文本
+            cases_text = "\n".join([
+                f"- [{c['metadata'].get('root_cause', 'unknown')}] "
+                f"(相似度: {c['similarity']:.2f})"
+                for c in similar_cases[:3]
+            ]) if similar_cases else "无相似案例"
+
+            user_message = DIAGNOSIS_USER_TEMPLATE.format(
+                alarms=alarms_text,
+                similar_cases=cases_text,
+                alarm_dict=get_alarm_dict_text(),
+            )
+
+            llm_client = get_llm_client()
+            result = await llm_client.generate_json(
+                system=DIAGNOSIS_SYSTEM_PROMPT,
+                user_message=user_message,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"LLM diagnosis failed: {e}")
+            return None
+
     def _rule_based_diagnosis(
         self,
         records: List[Any],
-        alarm_codes: Dict[str, int],
-    ) -> Tuple[str, float, List[Evidence]]:
+        alarm_codes: List[str],
+    ) -> tuple:
         """基于规则的简单诊断逻辑"""
         # 已知告警模式映射
         patterns = {
@@ -117,7 +160,9 @@ class DiagnosisAgent(BaseAgent):
                 return cause, conf, evidence
 
         # 默认诊断
-        top_alarm = max(alarm_codes, key=alarm_codes.get, default="unknown")
+        top_alarm = max(
+            set(alarm_codes), key=lambda x: alarm_codes.count(x), default="unknown"
+        )
         return (
             f"初步判定：{top_alarm} 告警为主，需进一步分析",
             0.60,

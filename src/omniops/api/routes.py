@@ -1,13 +1,16 @@
-"""API 路由"""
-from typing import Any, Dict
+"""API 路由（异步版本）"""
+import logging
+from typing import Dict
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
 
 from omniops.agents import DiagnosisAgent, ImpactAgent, PerceptionAgent, PlanningAgent
 from omniops.core.config import get_settings
+from omniops.core.file_storage import get_file_storage
 from omniops.ingestion.csv_parser import ingest_csv
-from omniops.memory.store import generate_session_id, get_session_store
+from omniops.memory.db_store import get_db_session_store
+from omniops.memory.redis_store import get_redis_session_store
+from omniops.memory.store import generate_session_id
 from omniops.models import (
     FeedbackRequest,
     InputType,
@@ -18,6 +21,8 @@ from omniops.models import (
 )
 from omniops.router.context_router import AgentMode, ContextRouter
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/v1", tags=["sessions"])
 
 
@@ -25,7 +30,7 @@ router = APIRouter(prefix="/v1", tags=["sessions"])
 async def create_session(file: UploadFile = File(...)):
     """创建新诊断会话"""
     settings = get_settings()
-    store = get_session_store()
+    storage = get_file_storage()
 
     content = await file.read()
     session_id = generate_session_id()
@@ -34,6 +39,8 @@ async def create_session(file: UploadFile = File(...)):
     filename = file.filename or ""
     if filename.lower().endswith((".png", ".jpg", ".jpeg", ".pdf")):
         input_type = InputType.IMAGE if filename.lower().endswith((".png", ".jpg", ".jpeg")) else InputType.PDF
+        # 保存图片/PDF 用于 OCR 处理
+        await storage.save_upload(content, filename, session_id)
         return SessionCreateResponse(
             session_id=session_id,
             status=SessionStatus.ANALYZING,
@@ -46,6 +53,7 @@ async def create_session(file: UploadFile = File(...)):
     try:
         records, uncertain_fields = ingest_csv(content)
     except Exception as e:
+        logger.error(f"CSV parsing failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"CSV 解析失败: {str(e)}",
@@ -101,7 +109,17 @@ async def create_session(file: UploadFile = File(...)):
     else:
         session.status = SessionStatus.COMPLETED
 
-    store.create(session)
+    # 存储会话（优先 Redis，备选内存）
+    try:
+        redis_store = await get_redis_session_store()
+        await redis_store.create(session)
+        logger.info(f"Session {session_id} stored in Redis")
+    except Exception as e:
+        logger.warning(f"Redis storage failed, using in-memory: {e}")
+        # 降级到内存存储
+        from omniops.memory.store import get_session_store
+        memory_store = get_session_store()
+        memory_store.create(session)
 
     # 估算时间
     estimated = 30 if mode == AgentMode.SINGLE else 60
@@ -116,8 +134,19 @@ async def create_session(file: UploadFile = File(...)):
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str):
     """获取会话详情"""
-    store = get_session_store()
-    session = store.get(session_id)
+    # 尝试 Redis
+    try:
+        redis_store = await get_redis_session_store()
+        session = await redis_store.get(session_id)
+        if session:
+            return session
+    except Exception:
+        pass
+
+    # 降级到内存存储
+    from omniops.memory.store import get_session_store
+    memory_store = get_session_store()
+    session = memory_store.get(session_id)
 
     if not session:
         raise HTTPException(
@@ -131,8 +160,19 @@ async def get_session(session_id: str):
 @router.get("/sessions/{session_id}/result")
 async def get_session_result(session_id: str):
     """获取诊断结果"""
-    store = get_session_store()
-    session = store.get(session_id)
+    # 尝试 Redis
+    try:
+        redis_store = await get_redis_session_store()
+        session = await redis_store.get(session_id)
+        if session:
+            return _build_result_response(session)
+    except Exception:
+        pass
+
+    # 降级到内存存储
+    from omniops.memory.store import get_session_store
+    memory_store = get_session_store()
+    session = memory_store.get(session_id)
 
     if not session:
         raise HTTPException(
@@ -140,12 +180,21 @@ async def get_session_result(session_id: str):
             detail=f"会话 {session_id} 不存在",
         )
 
-    # 构建结构化输入信息
+    return _build_result_response(session)
+
+
+def _build_result_response(session: Session) -> Dict:
+    """构建诊断结果响应"""
     structured_input = StructuredInput(
         source=session.input_type,
         rows_extracted=len(session.structured_data),
         uncertain_fields=[],
     )
+
+    # 从 structured_data 中提取告警码
+    alarm_codes = list(set(
+        r.alarm_code for r in session.structured_data if r.alarm_code
+    ))
 
     return {
         "session_id": session.session_id,
@@ -154,15 +203,55 @@ async def get_session_result(session_id: str):
         "diagnosis": session.diagnosis_result.model_dump() if session.diagnosis_result else None,
         "impact": session.impact.model_dump() if session.impact else None,
         "suggestion": session.suggestion.model_dump() if session.suggestion else None,
-        "similar_cases": [],
+        "similar_cases": [],  # TODO: 从 RAG 检索
     }
 
 
 @router.post("/sessions/{session_id}/feedback")
 async def submit_feedback(session_id: str, feedback: FeedbackRequest):
     """提交工程师反馈"""
-    store = get_session_store()
-    session = store.get(session_id)
+    # 尝试 Redis
+    try:
+        redis_store = await get_redis_session_store()
+        session = await redis_store.get(session_id)
+        if session:
+            # 更新反馈
+            session.human_feedback = feedback.model_dump()
+
+            if feedback.decision.value == "adopted":
+                session.status = SessionStatus.APPROVED
+            elif feedback.decision.value == "rejected":
+                session.status = SessionStatus.REJECTED
+            else:
+                session.status = SessionStatus.COMPLETED
+
+            await redis_store.update(
+                session_id,
+                status=session.status,
+                human_feedback=session.human_feedback,
+            )
+
+            # 保存反馈记录
+            from omniops.memory.db_store import get_db_session_store
+            try:
+                db_store = await get_db_session_store()
+                await db_store.save_feedback(
+                    session_id=session_id,
+                    decision=feedback.decision.value,
+                    actual_action=feedback.actual_action,
+                    effectiveness=feedback.effectiveness.value,
+                )
+            except Exception as e:
+                logger.warning(f"DB feedback save failed: {e}")
+
+            return {"message": "反馈已提交", "status": session.status}
+    except Exception:
+        pass
+
+    # 降级到内存存储
+    from omniops.memory.store import get_session_store
+    memory_store = get_session_store()
+    session = memory_store.get(session_id)
 
     if not session:
         raise HTTPException(
@@ -176,7 +265,6 @@ async def submit_feedback(session_id: str, feedback: FeedbackRequest):
             detail=f"当前状态 {session.status} 不允许提交反馈",
         )
 
-    # 更新反馈
     session.human_feedback = feedback.model_dump()
 
     if feedback.decision.value == "adopted":
@@ -186,7 +274,7 @@ async def submit_feedback(session_id: str, feedback: FeedbackRequest):
     else:
         session.status = SessionStatus.COMPLETED
 
-    store.update(session_id, **session.model_dump())
+    memory_store.update(session_id, **session.model_dump())
 
     return {"message": "反馈已提交", "status": session.status}
 
@@ -194,4 +282,35 @@ async def submit_feedback(session_id: str, feedback: FeedbackRequest):
 @router.get("/health")
 async def health_check():
     """健康检查"""
-    return {"status": "healthy", "version": "0.1.0"}
+    health_info = {
+        "status": "healthy",
+        "version": "0.1.0",
+        "components": {},
+    }
+
+    # 检查 Redis
+    try:
+        redis_store = await get_redis_session_store()
+        await redis_store.client.ping()
+        health_info["components"]["redis"] = "connected"
+    except Exception:
+        health_info["components"]["redis"] = "disconnected"
+
+    # 检查数据库
+    try:
+        from omniops.core.database import async_session_maker
+        async with async_session_maker() as db:
+            await db.execute("SELECT 1")
+        health_info["components"]["database"] = "connected"
+    except Exception:
+        health_info["components"]["database"] = "disconnected"
+
+    # 检查向量存储
+    try:
+        from omniops.rag.chroma_store import get_vector_store
+        count = get_vector_store().get_count()
+        health_info["components"]["vector_store"] = f"connected ({count} entries)"
+    except Exception:
+        health_info["components"]["vector_store"] = "disconnected"
+
+    return health_info

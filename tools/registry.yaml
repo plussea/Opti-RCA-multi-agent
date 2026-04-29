@@ -1,0 +1,69 @@
+# OmniOps 工具注册表
+
+tools:
+  query_topology:
+    name: 查询拓扑
+    description: 查询网元间的拓扑连接关系
+    endpoint: http://localhost:8080/v1/topology/query
+    method: POST
+    risk_level: read
+    permissions: []
+    rate_limit: 100
+    timeout: 30
+    schema:
+      input:
+        type: object
+        properties:
+          ne_name:
+            type: string
+            description: 网元名称
+        required: [ne_name]
+      output:
+        type: object
+        properties:
+          links:
+            type: array
+            description: 连接的链路列表
+
+  query_alarm_history:
+    name: 查询告警历史
+    description: 查询网元的历史告警记录
+    endpoint: http://localhost:8080/v1/alarms/history
+    method: GET
+    risk_level: read
+    permissions: []
+    rate_limit: 50
+    timeout: 60
+    schema:
+      input:
+        type: object
+        properties:
+          ne_name:
+            type: string
+          start_time:
+            type: string
+            format: date-time
+          end_time:
+            type: string
+            format: date-time
+        required: [ne_name]
+
+  execute_health_check:
+    name: 执行健康检查
+    description: 在网元上执行健康检查命令
+    endpoint: http://localhost:8080/v1/ne/health-check
+    method: POST
+    risk_level: medium
+    permissions: [engineer]
+    rate_limit: 20
+    timeout: 120
+    schema:
+      input:
+        type: object
+        properties:
+          ne_name:
+            type: string
+          check_type:
+            type: string
+            enum: [basic, extended, full]
+        required: [ne_name]
