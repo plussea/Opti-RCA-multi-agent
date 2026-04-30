@@ -2,7 +2,7 @@
 import threading
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from omniops.models import Session, SessionStatus
 
@@ -30,7 +30,7 @@ class InMemorySessionStore:
         with self._lock:
             return self._store.get(session_id)
 
-    def update(self, session_id: str, **updates) -> Optional[Session]:
+    def update(self, session_id: str, **updates: Any) -> Optional[Session]:
         """更新会话字段"""
         with self._lock:
             if session_id not in self._store:

@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class VerificationConsumer(BaseConsumer):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("omniops.verification")
 
-    async def handle_event(self, event: VerificationRequestedEvent) -> None:
+    async def handle_event(self, event: VerificationRequestedEvent) -> None:  # type: ignore[override]
         session_id = event.session_id
         logger.info(f"[VerificationConsumer] session={session_id}")
 

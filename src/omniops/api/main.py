@@ -15,8 +15,8 @@ from omniops.rag import init_seed_knowledge
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+@asynccontextmanager  # type: ignore[arg-type, misc]
+async def lifespan(app: FastAPI) -> None:  # type: ignore[misc]
     """应用生命周期管理"""
     # 启动时
     logger.info("Starting OmniOps...")
@@ -128,7 +128,7 @@ def create_app() -> FastAPI:
     )
 
     # CORS
-    app.add_middleware(
+    app.add_middleware(  # type: ignore[arg-type, misc]
         CORSMiddleware,
         allow_origins=["*"],
         allow_credentials=True,
@@ -145,7 +145,7 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
-def main():
+def main() -> None:
     import uvicorn
     settings = get_settings()
     uvicorn.run(

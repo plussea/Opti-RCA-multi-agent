@@ -1,16 +1,16 @@
 """RabbitMQ connection management"""
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     import aio_pika
 
 logger = logging.getLogger(__name__)
 
-_connection: Optional["aio_pika.Connection"] = None
+_connection: Optional[Any] = None
 
 
-async def get_connection() -> "aio_pika.Connection":
+async def get_connection() -> Any:
     """Get or create the singleton RabbitMQ connection.
 
     Uses connect_robust for automatic reconnection.

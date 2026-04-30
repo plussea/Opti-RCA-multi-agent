@@ -7,7 +7,7 @@ Usage:
     result = await provider.generate_json(system="...", user_message="...")
 """
 from functools import lru_cache
-from typing import Dict, Optional, Type
+from typing import Any, Callable, Dict, Optional, Type, cast
 
 from omniops.core.providers.base import BaseProvider, ProviderConfig
 
@@ -18,7 +18,7 @@ _REGISTRY: Dict[str, Type[BaseProvider]] = {}
 _cache: Dict[str, BaseProvider] = {}
 
 
-def register(name: str) -> Type[BaseProvider]:
+def register(name: str) -> Callable[[Type[BaseProvider]], Type[BaseProvider]]:
     """Decorator: register a provider class under `name`"""
     def decorator(cls: Type[BaseProvider]) -> Type[BaseProvider]:
         _REGISTRY[name] = cls
@@ -70,7 +70,7 @@ def _build_provider(name: str) -> BaseProvider:
         raise ValueError(f"Cannot build unknown provider: {name}")
 
 
-def _build_anthropic(settings) -> BaseProvider:
+def _build_anthropic(settings: Any) -> BaseProvider:
     """Build Anthropic provider (uses official SDK)"""
     try:
         import anthropic  # noqa: F401
@@ -93,7 +93,7 @@ def _build_anthropic(settings) -> BaseProvider:
 
 
 @lru_cache
-def _anthropic_client():
+def _anthropic_client() -> Any:
     import anthropic
 
     from omniops.core.config import get_settings
@@ -123,10 +123,10 @@ class AnthropicProvider(BaseProvider):
             messages=[{"role": "user", "content": user_message}],
             temperature=temperature,
         )
-        return response.content[0].text
+        return str(response.content[0].text)
 
 
-def _build_openai(settings) -> BaseProvider:
+def _build_openai(settings: Any) -> BaseProvider:
     from omniops.core.providers.base import ProviderConfig
     from omniops.core.providers.openai_provider import OpenAIProvider
 
@@ -140,7 +140,7 @@ def _build_openai(settings) -> BaseProvider:
     return OpenAIProvider(config)
 
 
-def _build_openrouter(settings) -> BaseProvider:
+def _build_openrouter(settings: Any) -> BaseProvider:
     from omniops.core.providers.base import ProviderConfig
     from omniops.core.providers.openrouter_provider import OpenRouterProvider
 
@@ -154,7 +154,7 @@ def _build_openrouter(settings) -> BaseProvider:
     return OpenRouterProvider(config)
 
 
-def _build_minimax(settings) -> BaseProvider:
+def _build_minimax(settings: Any) -> BaseProvider:
     from omniops.core.providers.base import ProviderConfig
     from omniops.core.providers.minimax_provider import MiniMaxProvider
 

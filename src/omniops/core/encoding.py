@@ -5,11 +5,11 @@ import chardet
 def detect_encoding(content: bytes) -> str:
     """检测字节流的编码"""
     result = chardet.detect(content)
-    encoding = result.get("encoding", "utf-8")
+    encoding = result.get("encoding")
     confidence = result.get("confidence", 0)
 
     if encoding and confidence > 0.7:
-        return encoding
+        return str(encoding)
 
     return "utf-8"
 

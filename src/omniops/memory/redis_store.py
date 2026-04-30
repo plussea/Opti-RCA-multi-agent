@@ -2,7 +2,7 @@
 import json
 import logging
 from datetime import timedelta
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import redis.asyncio as redis
 
@@ -18,13 +18,13 @@ class RedisSessionStore:
     SESSION_PREFIX = "session:"
     LOCK_PREFIX = "lock:"
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.redis_url = settings.redis_url
         self.ttl = timedelta(seconds=settings.working_memory_ttl)
         self._client: Optional[redis.Redis] = None
 
-    async def connect(self):
+    async def connect(self) -> None:
         """建立 Redis 连接"""
         if self._client is None:
             self._client = redis.from_url(
@@ -34,7 +34,7 @@ class RedisSessionStore:
             )
             logger.info(f"Redis connected to {self.redis_url}")
 
-    async def close(self):
+    async def close(self) -> None:
         """关闭 Redis 连接"""
         if self._client:
             await self._client.close()
@@ -83,7 +83,9 @@ class RedisSessionStore:
             "created_at": session.created_at.isoformat(),
         }
 
-        await self.client.hset(self._session_key(session.session_id), mapping=session_data)
+        # Filter out None values for redis hset
+        clean_data = {k: str(v) for k, v in session_data.items() if v is not None}
+        await self.client.hset(self._session_key(session.session_id), mapping=clean_data)  # type: ignore[arg-type]
         await self.client.expire(self._session_key(session.session_id), int(self.ttl.total_seconds()))
 
         logger.info(f"Session {session.session_id} created in Redis")
@@ -174,7 +176,7 @@ class RedisSessionStore:
             created_at=parse_date(data["created_at"]),
         )
 
-    async def update(self, session_id: str, **updates) -> Optional[Session]:
+    async def update(self, session_id: str, **updates: Any) -> Optional[Session]:
         """更新会话字段"""
         await self.connect()
 
@@ -196,7 +198,8 @@ class RedisSessionStore:
             update_data["perception_metadata"] = json.dumps(updates["perception_metadata"])
 
         if update_data:
-            await self.client.hset(self._session_key(session_id), mapping=update_data)
+            clean_update = {k: str(v) for k, v in update_data.items() if v is not None}
+            await self.client.hset(self._session_key(session_id), mapping=clean_update)  # type: ignore[arg-type]
             await self.client.expire(self._session_key(session_id), int(self.ttl.total_seconds()))
 
         return await self.get(session_id)
@@ -205,7 +208,7 @@ class RedisSessionStore:
         """删除会话"""
         await self.connect()
         result = await self.client.delete(self._session_key(session_id))
-        return result > 0
+        return (result or 0) > 0
 
     async def list_active(self) -> List[Session]:
         """列出所有活跃会话（不常用，Redis 适合按需查询）"""
@@ -225,17 +228,19 @@ class RedisSessionStore:
     async def acquire_lock(self, session_id: str, timeout: int = 30) -> bool:
         """获取会话锁（用于分布式操作）"""
         await self.connect()
-        return await self.client.set(
+        result = await self.client.set(
             self._lock_key(session_id),
             "locked",
             nx=True,
             ex=timeout,
         )
+        return bool(result)
 
     async def release_lock(self, session_id: str) -> bool:
         """释放会话锁"""
         await self.connect()
-        return await self.client.delete(self._lock_key(session_id)) > 0
+        result = await self.client.delete(self._lock_key(session_id))
+        return (result or 0) > 0
 
 
 # 全局单例

@@ -1,8 +1,9 @@
 """API 路由（异步版本）"""
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, status
+from sqlalchemy import text
 
 from omniops.agents import (
     DiagnosisAgent,
@@ -32,7 +33,7 @@ router = APIRouter(prefix="/v1", tags=["sessions"])
 
 
 @router.post("/sessions", response_model=SessionCreateResponse)
-async def create_session(file: Optional[UploadFile] = None):
+async def create_session(file: Optional[UploadFile] = None) -> SessionCreateResponse:
     """创建新诊断会话"""
     if file is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="file is required")
@@ -123,7 +124,7 @@ async def create_session(file: Optional[UploadFile] = None):
 
 
 async def _run_agent_chain_sync(
-    session,
+    session: Session,
     mode: AgentMode,
     router: ContextRouter,
 ) -> None:
@@ -134,21 +135,19 @@ async def _run_agent_chain_sync(
         if agent_name == "perception":
             continue  # 已执行
 
-        elif agent_name == "diagnosis":
+        agent: Any = None  # type: ignore[no-redef]
+        if agent_name == "diagnosis":
             agent = DiagnosisAgent()
-            await agent.process(session)
-
         elif agent_name == "impact":
             agent = ImpactAgent()
-            await agent.process(session)
-
         elif agent_name == "planning":
             agent = PlanningAgent()
-            await agent.process(session)
-
         elif agent_name == "verification":
             agent = VerificationAgent()
-            await agent.process(session)
+        else:
+            continue
+
+        await agent.process(session)
 
         # 状态机推进
         router.route_after_agent(session, agent_name)
@@ -172,7 +171,7 @@ async def _run_agent_chain_sync(
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: str) -> Session:
     """获取会话详情"""
     # 尝试 Redis
     try:
@@ -198,7 +197,7 @@ async def get_session(session_id: str):
 
 
 @router.get("/sessions/{session_id}/result")
-async def get_session_result(session_id: str):
+async def get_session_result(session_id: str) -> Dict[str, Any]:
     """获取诊断结果"""
     # 尝试 Redis
     try:
@@ -243,7 +242,7 @@ def _build_result_response(session: Session) -> Dict:
 
 
 @router.post("/sessions/{session_id}/feedback")
-async def submit_feedback(session_id: str, feedback: FeedbackRequest):
+async def submit_feedback(session_id: str, feedback: FeedbackRequest) -> Dict[str, Any]:
     """提交工程师反馈"""
     # 尝试 Redis
     try:
@@ -327,9 +326,9 @@ async def submit_feedback(session_id: str, feedback: FeedbackRequest):
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, Any]:
     """健康检查"""
-    health_info = {
+    health_info: Dict[str, Any] = {
         "status": "healthy",
         "version": "0.1.0",
         "components": {},
@@ -339,18 +338,18 @@ async def health_check():
     try:
         redis_store = await get_redis_session_store()
         await redis_store.client.ping()
-        health_info["components"]["redis"] = "connected"
+        health_info["components"]["redis"] = "connected"  # type: ignore[index]
     except Exception:
-        health_info["components"]["redis"] = "disconnected"
+        health_info["components"]["redis"] = "disconnected"  # type: ignore[index]
 
     # 检查数据库
     try:
         from omniops.core.database import async_session_maker
         async with async_session_maker() as db:
-            await db.execute("SELECT 1")
-        health_info["components"]["database"] = "connected"
+            await db.execute(text("SELECT 1"))  # type: ignore[call-overload]
+        health_info["components"]["database"] = "connected"  # type: ignore[index]
     except Exception:
-        health_info["components"]["database"] = "disconnected"
+        health_info["components"]["database"] = "disconnected"  # type: ignore[index]
 
     # 检查向量存储
     try:

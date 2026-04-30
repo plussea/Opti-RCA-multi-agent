@@ -2,6 +2,7 @@
 import json
 import logging
 from abc import abstractmethod
+from typing import Any
 
 from omniops.events.schemas import BaseEvent
 from omniops.memory.redis_store import get_redis_session_store
@@ -17,8 +18,8 @@ class BaseConsumer:
 
     def __init__(self, queue_name: str):
         self.queue_name = queue_name
-        self._channel = None
-        self._queue = None
+        self._channel: Any = None
+        self._queue: Any = None
         self._running = False
 
     async def start(self) -> None:
@@ -50,7 +51,7 @@ class BaseConsumer:
         if self._queue is None:
             await self.start()
 
-        async with self._queue.iterator() as queue_iter:
+        async with self._queue.iterator() as queue_iter:  # type: ignore[union-attr]
             async for message in queue_iter:
                 if not self._running:
                     break
@@ -60,7 +61,7 @@ class BaseConsumer:
                     logger.error(f"Error processing message on {self.queue_name}: {e}")
                     await message.nack(requeue=False)
 
-    async def _process_message(self, message) -> None:
+    async def _process_message(self, message: Any) -> None:
         """Parse and handle a message."""
         try:
             body = json.loads(message.body.decode())
@@ -99,14 +100,14 @@ class BaseConsumer:
         }
 
         cls = mapping.get(body.get("event_type", ""), BaseEvent)
-        return cls(**body)
+        return cls(**body)  # type: ignore[no-any-return]
 
     @abstractmethod
     async def handle_event(self, event: BaseEvent) -> None:
         """Override to define event handling logic."""
         ...
 
-    async def get_session(self, session_id: str):
+    async def get_session(self, session_id: str) -> Any:
         """Load session from Redis."""
         try:
             store = await get_redis_session_store()
@@ -115,7 +116,7 @@ class BaseConsumer:
             logger.error(f"Failed to load session {session_id}: {e}")
             return None
 
-    async def update_session(self, session_id: str, **updates) -> None:
+    async def update_session(self, session_id: str, **updates: Any) -> None:
         """Update session in Redis."""
         try:
             store = await get_redis_session_store()

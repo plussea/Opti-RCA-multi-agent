@@ -94,10 +94,11 @@ class VerificationAgent(BaseAgent):
                 "detail": "建议步骤为空",
             })
         else:
+            detail = f"包含 {len(suggestion.suggested_actions)} 个步骤" if suggestion else "无建议"
             checks.append({
                 "check": "action_completeness",
                 "passed": True,
-                "detail": f"包含 {len(suggestion.suggested_actions)} 个步骤",
+                "detail": detail,
             })
 
         all_passed = all(c.get("passed", False) for c in checks)

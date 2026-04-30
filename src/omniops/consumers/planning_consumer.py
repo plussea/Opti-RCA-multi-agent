@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class PlanningConsumer(BaseConsumer):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("omniops.planning")
 
-    async def handle_event(self, event: PlanningRequestedEvent) -> None:
+    async def handle_event(self, event: PlanningRequestedEvent) -> None:  # type: ignore[override]
         session_id = event.session_id
         logger.info(f"[PlanningConsumer] session={session_id}")
 

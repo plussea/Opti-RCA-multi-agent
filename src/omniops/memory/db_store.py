@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 class DBSessionStore:
     """PostgreSQL 异步会话存储"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._initialized = False
 
-    async def ensure_init(self):
+    async def ensure_init(self) -> None:
         """确保数据库已初始化"""
         if not self._initialized:
             await init_db()
@@ -79,16 +79,16 @@ class DBSessionStore:
             )
 
         return Session(
-            session_id=model.session_id,
-            input_type=model.input_type,
+            session_id=model.session_id,  # type: ignore[arg-type]
+            input_type=model.input_type,  # type: ignore[arg-type]
             structured_data=records,
             diagnosis_result=diagnosis_result,
             impact=impact,
             suggestion=suggestion,
-            human_feedback=model.human_feedback,
-            perception_metadata=model.perception_metadata,
+            human_feedback=model.human_feedback,  # type: ignore[arg-type]
+            perception_metadata=model.perception_metadata,  # type: ignore[arg-type]
             status=SessionStatus(model.status),
-            created_at=model.created_at,
+            created_at=model.created_at,  # type: ignore[arg-type]
         )
 
     async def _to_model(self, session: Session) -> Dict[str, Any]:
@@ -213,7 +213,7 @@ class DBSessionStore:
 
             return await self._to_session(model)
 
-    async def update(self, session_id: str, **updates) -> Optional[Session]:
+    async def update(self, session_id: str, **updates: Any) -> Optional[Session]:
         """更新会话字段"""
         await self.ensure_init()
 
@@ -273,7 +273,8 @@ class DBSessionStore:
             )
             result = await db.execute(stmt)
             await db.commit()
-            return result.rowcount > 0
+            rowcount = getattr(result, "rowcount", 0) or 0
+            return int(rowcount) > 0
 
     async def list_active(self) -> List[Session]:
         """列出所有活跃会话"""

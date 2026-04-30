@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class FileStorage:
     """本地文件存储服务"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.upload_dir = settings.get_upload_path()
         self.max_size = settings.max_upload_size

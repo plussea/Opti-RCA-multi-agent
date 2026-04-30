@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class ClosureConsumer(BaseConsumer):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("omniops.closure")
 
-    async def handle_event(self, event: KnowledgeClosureRequestedEvent) -> None:
+    async def handle_event(self, event: KnowledgeClosureRequestedEvent) -> None:  # type: ignore[override]
         session_id = event.session_id
         logger.info(f"[ClosureConsumer] processing session={session_id}")
 

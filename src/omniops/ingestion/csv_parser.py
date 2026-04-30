@@ -141,7 +141,7 @@ def ingest_csv(content: bytes) -> Tuple[List[AlarmRecord], List[Dict[Any, Any]]]
     # 标准化数据行
     records = []
     for idx, row in df.iterrows():
-        record_dict = {}
+        record_dict: Dict[str, Any] = {}
 
         # 逐字段处理
         if "ne_name" in df.columns:

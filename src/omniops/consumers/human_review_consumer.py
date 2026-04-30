@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import Any
 
 from omniops.events.schemas import HumanFeedbackReceivedEvent, HumanReviewRequiredEvent
 from omniops.memory.redis_store import get_redis_session_store
@@ -19,11 +20,11 @@ class HumanReviewConsumer(BaseConsumer):
     3. 消息 TTL 超时 → 移到 DLQ → 标记 session 为 ESCALATED
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("omniops.human_review")
         self._pending: dict = {}  # session_id → timeout_task
 
-    async def handle_event(self, event) -> None:
+    async def handle_event(self, event: Any) -> None:  # type: ignore[override]
 
         if isinstance(event, HumanReviewRequiredEvent):
             await self._handle_review_required(event)
@@ -32,7 +33,7 @@ class HumanReviewConsumer(BaseConsumer):
         else:
             logger.warning(f"Unexpected event type on human_review: {type(event)}")
 
-    async def _handle_review_required(self, event: HumanReviewRequiredEvent) -> None:
+    async def _handle_review_required(self, event: Any) -> None:
         """启动计时器，超时则升级"""
         session_id = event.session_id
         timeout_secs = event.timeout_seconds
@@ -51,7 +52,7 @@ class HumanReviewConsumer(BaseConsumer):
         )
 
         # 启动超时任务
-        async def timeout_watcher(sid: str, secs: int):
+        async def timeout_watcher(sid: str, secs: int) -> None:
             await asyncio.sleep(secs)
             await self._handle_timeout(sid, secs)
 

@@ -65,7 +65,8 @@ class MiniMaxProvider(BaseProvider):
         # MiniMax returns: { ..., "choices": [{ "messages": [...] }] }
         choices = data.get("choices", [])
         if choices:
-            return choices[0].get("messages", [{}])[-1].get("text", "")
+            msg = choices[0].get("messages", [{}])[-1]
+            return str(msg.get("text", ""))
         return ""
 
     async def close(self) -> None:

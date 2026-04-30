@@ -21,7 +21,7 @@ class ToolRegistry:
         self._tools: Dict[str, Dict[str, Any]] = {}
         self._load_tools()
 
-    def _load_tools(self):
+    def _load_tools(self) -> None:
         """从 YAML 文件加载工具注册表"""
         config_path = Path(self.config_path)
         if not config_path.exists():
@@ -49,7 +49,7 @@ class ToolRegistry:
             ]
         return list(self._tools.keys())
 
-    def register_tool(self, name: str, tool_def: Dict[str, Any]):
+    def register_tool(self, name: str, tool_def: Dict[str, Any]) -> None:
         """注册工具（运行时）"""
         self._tools[name] = tool_def
         logger.info(f"Tool registered: {name}")
@@ -140,7 +140,7 @@ tools:
 """
 
 
-def ensure_tools_registry():
+def ensure_tools_registry() -> None:
     """确保工具注册表文件存在"""
     settings = get_settings()
     registry_path = Path(settings.project_root) / "tools" / "registry.yaml"

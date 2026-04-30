@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 class SQLiteVectorStore:
     """基于 SQLite 的简单向量存储（Demo 级）"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.db_path = settings.get_chroma_path() / "vector_store.db"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         """初始化数据库"""
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
@@ -50,7 +50,7 @@ class SQLiteVectorStore:
         conn.close()
         logger.info(f"SQLite vector store initialized at {self.db_path}")
 
-    def reset(self):
+    def reset(self) -> None:
         """重置向量存储"""
         if self.db_path.exists():
             self.db_path.unlink()
@@ -271,7 +271,7 @@ class SQLiteVectorStore:
             logger.error(f"Failed to delete knowledge {doc_id}: {e}")
             return False
 
-    def increment_hit_count(self, doc_id: str):
+    def increment_hit_count(self, doc_id: str) -> None:
         """增加命中计数"""
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
@@ -289,7 +289,7 @@ class SQLiteVectorStore:
         cursor.execute("SELECT COUNT(*) FROM knowledge_entries")
         count = cursor.fetchone()[0]
         conn.close()
-        return count
+        return int(count)
 
 
 # 全局单例
@@ -372,7 +372,7 @@ async def ingest_knowledge(
     return doc_id
 
 
-async def init_seed_knowledge():
+async def init_seed_knowledge() -> None:
     """初始化种子知识库"""
     vector_store = get_vector_store()
 

@@ -5,8 +5,9 @@
 """
 import json
 import logging
+import re
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
 from anthropic import Anthropic
 
@@ -23,7 +24,7 @@ class LLMClient:
         self.provider = provider
 
         if provider == "anthropic":
-            self.client = Anthropic(api_key=settings.anthropic_api_key)
+            self.client: Any = Anthropic(api_key=settings.anthropic_api_key)
             self.model = settings.anthropic_model
             self.max_tokens = settings.anthropic_max_tokens
         elif provider == "openai":
@@ -61,7 +62,7 @@ class LLMClient:
                     ],
                     temperature=temperature,
                 )
-                return response.content[0].text
+                return str(response.content[0].text)
 
             elif self.provider == "openai":
                 response = await self.client.chat.completions.create(
@@ -73,11 +74,14 @@ class LLMClient:
                     temperature=temperature,
                     max_tokens=max_tokens or self.max_tokens,
                 )
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                return str(content) if content else ""
 
         except Exception as e:
             logger.error(f"LLM generation failed: {e}")
             raise
+
+        return ""
 
     async def generate_json(
         self,
@@ -94,19 +98,15 @@ class LLMClient:
 
         # 尝试提取 JSON
         try:
-            # 尝试解析完整的 JSON
-            return json.loads(response_text)
+            return cast(Dict[str, Any], json.loads(response_text))
         except json.JSONDecodeError:
-            # 尝试从文本中提取 JSON 块
-            import re
             json_match = re.search(r"```json\s*(.*?)\s*```", response_text, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group(1))
+                return cast(Dict[str, Any], json.loads(json_match.group(1)))
 
-            # 最后尝试查找花括号包裹的内容
             json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group(0))
+                return cast(Dict[str, Any], json.loads(json_match.group(0)))
 
             raise ValueError(f"Failed to parse JSON from response: {response_text}") from None
 
@@ -119,12 +119,11 @@ class LLMClient:
         """对话式生成"""
         try:
             if self.provider == "anthropic":
-                # Anthropic 需要特殊处理
                 anthropic_messages = []
                 for msg in messages:
                     role = msg["role"]
                     if role == "system":
-                        continue  # system 单独处理
+                        continue
                     anthropic_messages.append({
                         "role": "user" if role == "user" else "assistant",
                         "content": msg["content"],
@@ -137,10 +136,10 @@ class LLMClient:
                     messages=anthropic_messages,
                     temperature=temperature,
                 )
-                return response.content[0].text
+                return str(response.content[0].text)
 
             elif self.provider == "openai":
-                openai_messages = []
+                openai_messages: List[Dict[str, str]] = []
                 if system:
                     openai_messages.append({"role": "system", "content": system})
                 openai_messages.extend(messages)
@@ -151,11 +150,14 @@ class LLMClient:
                     temperature=temperature,
                     max_tokens=self.max_tokens,
                 )
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                return str(content) if content else ""
 
         except Exception as e:
             logger.error(f"LLM chat failed: {e}")
             raise
+
+        return ""
 
 
 # 全局单例（延迟初始化）

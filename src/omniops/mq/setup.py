@@ -17,7 +17,7 @@ async def setup_mq() -> None:
         # ── Events exchange (topic) ─────────────────────────────────────────
         events_exchange = await channel.declare_exchange(
             "omniops.events",
-            exchange_type="topic",
+            type="topic",
             durable=True,
         )
 
@@ -38,7 +38,7 @@ async def setup_mq() -> None:
         # ── Human review exchange + queue (with DLQ) ─────────────────────────
         dlq_exchange = await channel.declare_exchange(
             "omniops.dlq",
-            exchange_type="direct",
+            type="direct",
             durable=True,
         )
         dlq = await channel.declare_queue("omniops.dlq", durable=True)
@@ -46,7 +46,7 @@ async def setup_mq() -> None:
 
         hitl_exchange = await channel.declare_exchange(
             "omniops.hitl",
-            exchange_type="topic",
+            type="topic",
             durable=True,
         )
         hr_queue = await channel.declare_queue(

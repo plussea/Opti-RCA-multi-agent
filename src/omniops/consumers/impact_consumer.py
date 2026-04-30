@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class ImpactConsumer(BaseConsumer):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("omniops.impact")
 
-    async def handle_event(self, event: ImpactRequestedEvent) -> None:
+    async def handle_event(self, event: ImpactRequestedEvent) -> None:  # type: ignore[override]
         session_id = event.session_id
         logger.info(f"[ImpactConsumer] session={session_id}")
 

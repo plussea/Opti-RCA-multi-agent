@@ -7,7 +7,7 @@ When RabbitMQ is available (Phase 4+), this upgrades to real aio-pika publish.
 import json
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from omniops.events.schemas import BaseEvent
 
@@ -36,7 +36,7 @@ class OmniOpsPublisher:
     otherwise falls back to structured logging.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._connection = None
         self._channel = None
         self._real_mode = False
@@ -47,7 +47,7 @@ class OmniOpsPublisher:
             from omniops.mq.connection import get_connection
             conn = await get_connection()
             self._channel = await conn.channel()
-            await self._channel.set_qos(prefetch_count=1)
+            await self._channel.set_qos(prefetch_count=1)  # type: ignore[attr-defined]
             self._real_mode = True
             logger.info("OmniOpsPublisher: connected to RabbitMQ (real mode)")
         except Exception as e:
@@ -78,7 +78,7 @@ class OmniOpsPublisher:
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
             content_type="application/json",
         )
-        exchange = await self._channel.get_exchange("omniops.events")
+        exchange = await self._channel.get_exchange("omniops.events")  # type: ignore[attr-defined]
         await exchange.publish(msg, routing_key=routing_key)
 
     def _publish_stub(self, event: BaseEvent, routing_key: str) -> None:
@@ -93,9 +93,9 @@ class OmniOpsPublisher:
 
     # ── Convenience publish methods ──────────────────────────────────────────
 
-    async def publish_diagnosis_requested(self, session) -> None:
+    async def publish_diagnosis_requested(self, session: Any) -> None:
         from omniops.events.schemas import DiagnosisRequestedEvent
-        alarm_codes = {r.alarm_code for r in session.structured_data if r.alarm_code}
+        alarm_codes = [r.alarm_code for r in session.structured_data if r.alarm_code]
         event = DiagnosisRequestedEvent(
             session_id=session.session_id,
             alarm_codes=alarm_codes,
@@ -122,7 +122,7 @@ class OmniOpsPublisher:
         )
         await self.publish(event)
 
-    async def publish_impact_requested(self, session) -> None:
+    async def publish_impact_requested(self, session: Any) -> None:
         from omniops.events.schemas import ImpactRequestedEvent
         event = ImpactRequestedEvent(
             session_id=session.session_id,
@@ -131,7 +131,7 @@ class OmniOpsPublisher:
         )
         await self.publish(event)
 
-    async def publish_planning_requested(self, session) -> None:
+    async def publish_planning_requested(self, session: Any) -> None:
         from omniops.events.schemas import PlanningRequestedEvent
         diag = getattr(session, "diagnosis_result", None)
         imp = getattr(session, "impact", None)
@@ -143,7 +143,7 @@ class OmniOpsPublisher:
         )
         await self.publish(event)
 
-    async def publish_verification_requested(self, session) -> None:
+    async def publish_verification_requested(self, session: Any) -> None:
         from omniops.events.schemas import VerificationRequestedEvent
         event = VerificationRequestedEvent(
             session_id=session.session_id,

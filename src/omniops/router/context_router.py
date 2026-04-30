@@ -16,7 +16,7 @@ class AgentMode(str, Enum):
 class ContextRouter:
     """上下文路由器：根据告警特征决定 Agent 协作模式"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings()
 
     def decide_mode(self, session: Session) -> AgentMode:
@@ -64,7 +64,7 @@ class ContextRouter:
 
     def route_after_agent(
         self,
-        session,
+        session: Session,
         completed_agent: str,
     ) -> str:
         """每次 Agent 完成后调用，决定下一步。
@@ -130,7 +130,7 @@ class ContextRouter:
 
     def decide_next_agent_after_completion(
         self,
-        session,
+        session: Session,
     ) -> str:
         """通用入口：根据当前 step 决定下一步（消费 completed 事件时调用）"""
         step = session.current_step

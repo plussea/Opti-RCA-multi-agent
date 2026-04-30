@@ -27,7 +27,7 @@ class LLMProvider:
         user_message: str,
         temperature: float = 0.7,
     ) -> str:
-        ...
+        raise NotImplementedError
 
     async def generate_json(
         self,
@@ -35,7 +35,7 @@ class LLMProvider:
         user_message: str,
         temperature: float = 0.3,
     ) -> Dict[str, Any]:
-        ...
+        raise NotImplementedError
 
 
 class BaseProvider(ABC):
@@ -77,16 +77,16 @@ class BaseProvider(ABC):
     def _parse_json(self, content: str) -> Dict[str, Any]:
         """Parse JSON from model response text"""
         try:
-            return json.loads(content)
+            return dict(json.loads(content))
         except json.JSONDecodeError:
             # Try markdown code block
             match = re.search(r"```json\s*(.*?)\s*```", content, re.DOTALL)
             if match:
-                return json.loads(match.group(1))
+                return dict(json.loads(match.group(1)))
             # Try curly braces
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if match:
-                return json.loads(match.group(0))
+                return dict(json.loads(match.group(0)))
             raise ValueError(f"Failed to parse JSON from response: {content}") from None
 
     @abstractmethod

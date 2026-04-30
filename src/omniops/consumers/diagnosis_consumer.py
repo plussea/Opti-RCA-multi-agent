@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 class DiagnosisConsumer(BaseConsumer):
     """消费 diagnosis_requested 事件，执行诊断后发布下一事件"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("omniops.diagnosis")
 
-    async def handle_event(self, event: DiagnosisRequestedEvent) -> None:
+    async def handle_event(self, event: DiagnosisRequestedEvent) -> None:  # type: ignore[override]
         session_id = event.session_id
         logger.info(f"[DiagnosisConsumer] processing session={session_id}")
 
