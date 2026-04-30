@@ -7,7 +7,7 @@ Usage:
     result = await provider.generate_json(system="...", user_message="...")
 """
 from functools import lru_cache
-from typing import Any, Callable, Dict, Optional, Type, cast
+from typing import Any, Callable, Dict, Optional, Type
 
 from omniops.core.providers.base import BaseProvider, ProviderConfig
 

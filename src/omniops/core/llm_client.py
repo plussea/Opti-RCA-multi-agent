@@ -7,7 +7,7 @@ import json
 import logging
 import re
 import warnings
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, cast
 
 from anthropic import Anthropic
 
