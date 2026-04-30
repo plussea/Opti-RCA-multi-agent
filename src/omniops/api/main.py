@@ -56,6 +56,7 @@ async def lifespan(app: FastAPI) -> None:  # type: ignore[misc]
         from omniops.consumers import (
             ClosureConsumer,
             DiagnosisConsumer,
+            ImpactConsumer,
             PlanningConsumer,
             VerificationConsumer,
         )
@@ -67,6 +68,7 @@ async def lifespan(app: FastAPI) -> None:  # type: ignore[misc]
         # 启动消费任务
         for consumer_cls, count in [
             (DiagnosisConsumer, settings.diagnosis_consumer_count),
+            (ImpactConsumer, settings.planning_consumer_count),
             (PlanningConsumer, settings.planning_consumer_count),
             (VerificationConsumer, 1),
             (ClosureConsumer, 1),

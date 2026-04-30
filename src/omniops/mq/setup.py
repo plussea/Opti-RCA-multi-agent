@@ -3,6 +3,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DLQ_ARGS = {
+    "x-dead-letter-exchange": "omniops.dlq",
+    "x-dead-letter-routing-key": "session.*",
+}
+
 
 async def setup_mq() -> None:
     """Declare all exchanges, queues, and bindings.
@@ -14,53 +19,47 @@ async def setup_mq() -> None:
         conn = await get_connection()
         channel = await conn.channel()
 
-        # ── Events exchange (topic) ─────────────────────────────────────────
-        events_exchange = await channel.declare_exchange(
-            "omniops.events",
-            type="topic",
-            durable=True,
-        )
+        # ── Exchanges ───────────────────────────────────────────────────────────
+        await channel.declare_exchange("omniops.events", type="topic", durable=True)
+        await channel.declare_exchange("omniops.dlq", type="direct", durable=True)
+        await channel.declare_exchange("omniops.hitl", type="topic", durable=True)
 
-        # Queues bound to events exchange
-        queues = [
+        # ── Queues (all with DLX for consistent dead-letter handling) ─────────
+        queue_bindings = [
             ("omniops.diagnosis", "session.*.diagnosis_requested"),
             ("omniops.impact", "session.*.impact_requested"),
             ("omniops.planning", "session.*.planning_requested"),
             ("omniops.verification", "session.*.verification_requested"),
             ("omniops.closure", "session.*.knowledge_closure_requested"),
             ("omniops.session_resolved", "session.*.session_resolved"),
+            ("omniops.human_review", "session.*.human_review_required"),
+            ("omniops.human_review", "session.*.human_feedback_received"),
         ]
-        for queue_name, routing_pattern in queues:
-            q = await channel.declare_queue(queue_name, durable=True)
-            await q.bind(events_exchange, routing_key=routing_pattern)
-            logger.info(f"Queue declared and bound: {queue_name} -> {routing_pattern}")
 
-        # ── Human review exchange + queue (with DLQ) ─────────────────────────
-        dlq_exchange = await channel.declare_exchange(
-            "omniops.dlq",
-            type="direct",
-            durable=True,
-        )
+        events_exchange = await channel.get_exchange("omniops.events")
+        hitl_exchange = await channel.get_exchange("omniops.hitl")
+        dlq_exchange = await channel.get_exchange("omniops.dlq")
+
+        # Collect unique queues and declare with DLX
+        seen: set = set()
+        for queue_name, routing_pattern in queue_bindings:
+            if queue_name not in seen:
+                seen.add(queue_name)
+                q = await channel.declare_queue(
+                    queue_name,
+                    durable=True,
+                    arguments=DLQ_ARGS,
+                )
+                # Bind to appropriate exchange
+                if queue_name == "omniops.human_review":
+                    await q.bind(hitl_exchange, routing_key=routing_pattern)
+                else:
+                    await q.bind(events_exchange, routing_key=routing_pattern)
+                logger.info(f"Queue declared and bound: {queue_name}")
+
+        # DLQ binding
         dlq = await channel.declare_queue("omniops.dlq", durable=True)
         await dlq.bind(dlq_exchange, routing_key="session.*")
-
-        hitl_exchange = await channel.declare_exchange(
-            "omniops.hitl",
-            type="topic",
-            durable=True,
-        )
-        hr_queue = await channel.declare_queue(
-            "omniops.human_review",
-            durable=True,
-            arguments={
-                "x-dead-letter-exchange": "omniops.dlq",
-                "x-dead-letter-routing-key": "session.*",
-            },
-        )
-        await hr_queue.bind(hitl_exchange, routing_key="session.*.human_review_required")
-        await hr_queue.bind(hitl_exchange, routing_key="session.*.human_feedback_received")
-        logger.info("Human review queue with DLQ declared")
-
         logger.info("RabbitMQ setup complete: all exchanges and queues declared")
 
     except Exception as e:
