@@ -1,15 +1,13 @@
-version: "3.8"
-
 services:
-  # 一体化数据库：PostgreSQL 15 + pgvector
+  # 一体化数据库：PostgreSQL + pgvector
   postgres:
-    image: ankane/pgvector:latest
+    image: ankane/pgvector:v0.5.0
     environment:
       POSTGRES_DB: omniops
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,11 +16,11 @@ services:
       timeout: 5s
       retries: 5
 
-  # 缓存 + 轻量 MQ
+  # 缓存
   redis:
-    image: redis:7-alpine
+    image: redis:8.8-m03-trixie
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -33,13 +31,13 @@ services:
 
   # RabbitMQ 消息队列 + 管理界面
   rabbitmq:
-    image: rabbitmq:3.12-management-alpine
+    image: rabbitmq:management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: omniops
       RABBITMQ_DEFAULT_PASS: omniops123
     ports:
-      - "5672:5672"    # AMQP 协议端口
-      - "15672:15672"  # 管理界面 http://localhost:15672
+      - "127.0.0.1:5672:5672"    # AMQP 协议端口
+      - "127.0.0.1:15672:15672"  # 管理界面 http://localhost:15672
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -72,21 +70,21 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: uvicorn omniops.api.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uv run uvicorn omniops.api.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Neo4j（图数据库）
   neo4j:
-    image: neo4j:5.15-community
+    image: neo4j:4.4.48-community
     environment:
       NEO4J_AUTH: neo4j/password
       NEO4J_PLUGINS: '["apoc"]'
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     volumes:
       - neo4j_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5

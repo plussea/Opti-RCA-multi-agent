@@ -1,0 +1,25 @@
+# 先排除，后用 !例外恢复需要的文件
+*.md
+!README.md
+!CLAUDE.md
+
+.venv
+.git
+.env
+.env.*
+*.pyc
+__pycache__
+.pytest_cache
+*.egg-info
+tests
+docs
+.claude
+.github
+.vscode
+LICENSE
+docker-compose*.yml
+Dockerfile
+.dockerignore
+uploads
+data
+*.log
