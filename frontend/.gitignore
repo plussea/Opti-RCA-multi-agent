@@ -1,0 +1,6 @@
+# .gitignore for Next.js frontend
+node_modules/
+.next/
+.env*.local
+.vercel
+*.log

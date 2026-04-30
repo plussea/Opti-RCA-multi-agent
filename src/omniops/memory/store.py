@@ -51,10 +51,14 @@ class InMemorySessionStore:
 
     def list_active(self) -> List[Session]:
         """列出所有活跃会话"""
+        active = {
+            "analyzing", "perceived", "diagnosing", "planning",
+            "verifying", "pending_human", "needs_review",
+        }
         with self._lock:
             return [
                 s for s in self._store.values()
-                if s.status in (SessionStatus.ANALYZING, SessionStatus.NEEDS_REVIEW)
+                if s.status.value in active
             ]
 
     def cleanup_expired(self) -> int:

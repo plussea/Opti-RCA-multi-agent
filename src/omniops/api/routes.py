@@ -1,8 +1,11 @@
 """API 路由（异步版本）"""
+import asyncio
+import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 
 from omniops.agents import (
@@ -323,6 +326,108 @@ async def submit_feedback(session_id: str, feedback: FeedbackRequest) -> Dict[st
     memory_store.update(session_id, **session.model_dump())
 
     return {"message": "反馈已提交", "status": session.status}
+
+
+@router.get("/sessions")
+async def list_sessions() -> List[Dict[str, Any]]:
+    """List all active sessions for the frontend sidebar."""
+    try:
+        store = await get_redis_session_store()
+        sessions = await store.list_active()
+    except Exception:
+        from omniops.memory.store import get_session_store
+        memory_store = get_session_store()
+        sessions = memory_store.list_active()
+
+    return [
+        {
+            "session_id": s.session_id,
+            "status": s.status.value,
+            "current_step": s.current_step,
+            "created_at": s.created_at.isoformat(),
+            "input_type": s.input_type.value,
+            "ne_count": len(s.structured_data),
+            "root_cause": (
+                s.diagnosis_result.root_cause
+                if s.diagnosis_result else None
+            ),
+        }
+        for s in sessions
+    ]
+
+
+@router.get("/sessions/{session_id}/stream")
+async def stream_session(session_id: str) -> StreamingResponse:
+    """Server-Sent Events stream for real-time session status updates.
+
+    Frontend consumes with:
+        const es = new EventSource('/v1/sessions/{session_id}/stream')
+        es.addEventListener('status', (e) => { const data = JSON.parse(e.data) })
+    """
+    async def event_generator() -> Any:
+        poll_interval = 1.5
+        terminal = {"approved", "rejected", "resolved", "completed", "failed", "escalated"}
+        poll_count = 0
+
+        while True:
+            poll_count += 1
+
+            # Heartbeat comment to prevent Nginx/browser timeouts every ~30s
+            if poll_count % 20 == 0:
+                yield ""
+                await asyncio.sleep(0.01)
+                continue
+
+            # Load session from Redis (fast path)
+            session: Any = None  # type: ignore[no-redef]
+            try:
+                store = await get_redis_session_store()
+                session = await store.get(session_id)
+            except Exception:
+                pass
+
+            # Fallback to in-memory store
+            if session is None:
+                from omniops.memory.store import get_session_store
+                memory_store = get_session_store()
+                session = memory_store.get(session_id)
+
+            if session is None:
+                payload = json.dumps({"session_id": session_id, "error": "not_found"})
+                yield f"event: error\ndata: {payload}\n\n"
+                break
+
+            payload_data: Dict[str, Any] = {
+                "session_id": session.session_id,
+                "status": session.status.value if hasattr(session.status, "value") else str(session.status),
+                "current_step": session.current_step,
+                "diagnosis_result": (
+                    session.diagnosis_result.model_dump() if session.diagnosis_result else None
+                ),
+                "impact": session.impact.model_dump() if session.impact else None,
+                "suggestion": session.suggestion.model_dump() if session.suggestion else None,
+                "human_feedback": session.human_feedback,
+                "created_at": session.created_at.isoformat(),
+            }
+
+            # Terminal statuses — send final event then close
+            if session.status.value in terminal:
+                yield f"event: status\ndata: {json.dumps(payload_data)}\n\n"
+                yield "event: close\ndata: {}\n\n"
+                break
+
+            yield f"event: status\ndata: {json.dumps(payload_data)}\n\n"
+            await asyncio.sleep(poll_interval)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/health")
