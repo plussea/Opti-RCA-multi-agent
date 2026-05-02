@@ -35,7 +35,6 @@ class DBSessionStore:
 
             alarm_record = AlarmRecord(
                 ne_name=r.ne_name,
-                alarm_code=r.alarm_code,
                 alarm_name=r.alarm_name,
                 severity=Severity(r.severity) if r.severity else None,
                 occur_time=r.occur_time,
@@ -101,7 +100,6 @@ class DBSessionStore:
         for r in session.structured_data:
             records_json.append({
                 "ne_name": r.ne_name,
-                "alarm_code": r.alarm_code,
                 "alarm_name": r.alarm_name,
                 "severity": r.severity.value if r.severity else None,
                 "occur_time": r.occur_time.isoformat() if r.occur_time else None,
@@ -180,7 +178,6 @@ class DBSessionStore:
                 alarm = AlarmRecordModel(
                     session_id=session.session_id,
                     ne_name=r.ne_name,
-                    alarm_code=r.alarm_code,
                     alarm_name=r.alarm_name,
                     severity=r.severity.value if r.severity else None,
                     occur_time=r.occur_time,

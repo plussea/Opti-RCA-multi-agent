@@ -350,19 +350,22 @@ async def ingest_knowledge(
     """将诊断结果摄入知识库"""
     vector_store = get_vector_store()
 
+    # alarm_codes 参数实际传入的是 alarm_names（语义一致，内部用 alarm_codes 列名存储）
+    alarm_names = alarm_codes
+
     actions_text = "\n".join([
         f"{i+1}. {a.get('action', '')}（{a.get('estimated_time', '')}）"
         for i, a in enumerate(suggested_actions)
     ])
 
     text = f"""根因：{root_cause}
-告警模式：{', '.join(alarm_codes)}
+告警模式：{', '.join(alarm_names)}
 修复步骤：
 {actions_text}
 """
 
     metadata = {
-        "alarm_codes": alarm_codes,
+        "alarm_codes": alarm_names,
         "root_cause": root_cause,
         "source_session": source_session,
         "created_at": datetime.utcnow().isoformat(),

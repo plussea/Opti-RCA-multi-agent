@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from omniops.memory.redis_store import get_redis_session_store
 
-router = APIRouter(tags=["health"])
+router = APIRouter(prefix="/v1", tags=["health"])
 
 
 @router.get("/health")

@@ -68,7 +68,7 @@ class Neo4jClient:
     async def ensure_constraints(self) -> None:
         """创建唯一性约束（幂等）"""
         constraints = [
-            "CREATE CONSTRAINT alarm_code IF NOT EXISTS FOR (a:Alarm) REQUIRE a.code IS UNIQUE",
+            "CREATE CONSTRAINT alarm_name IF NOT EXISTS FOR (a:Alarm) REQUIRE a.name IS UNIQUE",
             "CREATE CONSTRAINT fault_id IF NOT EXISTS FOR (f:Fault) REQUIRE f.id IS UNIQUE",
             "CREATE CONSTRAINT device_id IF NOT EXISTS FOR (d:Device) REQUIRE d.id IS UNIQUE",
             "CREATE CONSTRAINT link_id IF NOT EXISTS FOR (t:Topology) REQUIRE t.link_id IS UNIQUE",
@@ -144,20 +144,23 @@ class Neo4jClient:
     ) -> Dict[str, Any]:
         """查询以种子实体为中心的子图"""
         await self.connect()
-        rel_filter = ""
-        if relation_types:
-            rel_filter = f"WHERE type(r) IN {relation_types}"
 
         label_filter = ""
         if labels:
             label_filter = f"AND any(label IN labels(n) WHERE label IN {labels})"
+
+        # Filter on relationship list inside path: any(rel IN r WHERE type(rel) IN $rel_types)
+        # $rel_types is only set when relation_types is provided (otherwise we skip the filter)
+        rel_where = ""
+        if relation_types:
+            rel_where = f"WHERE any(rel IN r WHERE type(rel) IN $rel_types)"
 
         cql = f"""
         MATCH (start)
         WHERE any(prop IN ['code', 'id', 'name'] WHERE start[prop] IN $seeds)
         {label_filter}
         MATCH path = (start)-[r*1..{hops}]-(neighbor)
-        {rel_filter}
+        {rel_where}
         WITH DISTINCT start, neighbor, r
         WITH collect(DISTINCT start) + collect(DISTINCT neighbor) as raw_nodes, collect(DISTINCT r) as raw_rels
         UNWIND raw_nodes as n
@@ -169,7 +172,9 @@ class Neo4jClient:
             [n IN nodes_list | {{id: coalesce(n.code, n.id, n.name), label: labels(n)[0], name: n.name, props: n}}] as nodes,
             [rel IN rels_list | {{source: coalesce(startNode(rel).code, startNode(rel).id, startNode(rel).name), target: coalesce(endNode(rel).code, endNode(rel).id, endNode(rel).name), type: type(rel)}}] as edges
         """
-        params = {"seeds": seed_entities}
+        params: Dict[str, Any] = {"seeds": seed_entities}
+        if relation_types:
+            params["rel_types"] = relation_types
         async with self._driver.session(database="neo4j") as session:
             result = await session.run(cql, **params)
             records = await result.data()
@@ -210,18 +215,23 @@ class Neo4jClient:
             result = await session.run(cql, domain=domain)
             return await result.data()
 
-    async def get_rules(self, alarm_codes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    async def get_rules(self, alarm_names: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """获取告警相关规则"""
         await self.connect()
-        if alarm_codes:
+        if alarm_names:
             cql = """
-            MATCH (r:Rule)-[:APPLIES_TO]->(a:Alarm)
-            WHERE a.code IN $codes
-            RETURN r.rule_id as rule_id, r.name as name, r.content as content
+            MATCH (r:Rule)-[:IS_CAUSED_BY|TRIGGERS]->(a:Alarm)
+            WHERE a.name IN $names
+            RETURN r.rule_id as rule_id, r.name as name,
+                   coalesce(r.content, r.description, '') as content
             """
-            params = {"codes": alarm_codes}
+            params = {"names": alarm_names}
         else:
-            cql = "MATCH (r:Rule) RETURN r.rule_id as rule_id, r.name as name, r.content as content"
+            cql = """
+            MATCH (r:Rule)
+            RETURN r.rule_id as rule_id, r.name as name,
+                   coalesce(r.content, r.description, '') as content
+            """
             params = {}
         async with self._driver.session(database="neo4j") as session:
             result = await session.run(cql, **params)
@@ -277,9 +287,8 @@ class Neo4jClient:
         t0 = time.monotonic()
 
         if seed_entities is None:
-            alarm_codes = [r.alarm_code for r in (structured_data or []) if r.alarm_code]
             alarm_names = [r.alarm_name for r in (structured_data or []) if r.alarm_name]
-            seed_entities = extract_seed_entities(alarm_codes, alarm_names)
+            seed_entities = extract_seed_entities(alarm_names)
 
         if not seed_entities:
             return self._empty_session_result(0)
@@ -306,10 +315,10 @@ class Neo4jClient:
             logger.warning(f"[Neo4jClient] community summaries failed: {e}")
 
         rules: List[Dict[str, Any]] = []
-        if alarm_codes:
+        if alarm_names:
             try:
                 await self.connect()
-                rules = await self.get_rules(alarm_codes)
+                rules = await self.get_rules(alarm_names)
             except Exception as e:
                 logger.warning(f"[Neo4jClient] rules query failed: {e}")
 

@@ -63,7 +63,6 @@ class RedisSessionStore:
             "structured_data": json.dumps([
                 {
                     "ne_name": r.ne_name,
-                    "alarm_code": r.alarm_code,
                     "alarm_name": r.alarm_name,
                     "severity": r.severity.value if r.severity else None,
                     "occur_time": r.occur_time.isoformat() if r.occur_time else None,
@@ -124,7 +123,6 @@ class RedisSessionStore:
         for r in structured_data:
             records.append(AlarmRecord(
                 ne_name=r["ne_name"],
-                alarm_code=r.get("alarm_code"),
                 alarm_name=r.get("alarm_name"),
                 severity=Severity(r["severity"]) if r.get("severity") else None,
                 occur_time=parse_date(r["occur_time"]) if r.get("occur_time") else None,

@@ -41,7 +41,6 @@ class Severity(str, Enum):
 class AlarmRecord(BaseModel):
     """标准化告警记录"""
     ne_name: str = Field(..., description="网元名称")
-    alarm_code: Optional[str] = Field(None, description="告警码")
     alarm_name: Optional[str] = Field(None, description="告警名称")
     severity: Optional[Severity] = Field(None, description="告警级别")
     occur_time: Optional[datetime] = Field(None, description="发生时间")
@@ -65,7 +64,7 @@ class Evidence(BaseModel):
     """证据"""
     type: str
     source: str
-    code: Optional[str] = None
+    alarm_name: Optional[str] = Field(None, description="告警名称")
     field: Optional[str] = None
     value: Optional[str] = None
     time: Optional[str] = None

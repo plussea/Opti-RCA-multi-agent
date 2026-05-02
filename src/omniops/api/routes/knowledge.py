@@ -142,7 +142,7 @@ async def query_graph(request: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             pass
         try:
-            rules = await client.get_rules(request.get("alarm_codes"))[:top_k]
+            rules = await client.get_rules(request.get("alarm_names", request.get("alarm_codes", [])))[:top_k]
         except Exception:
             pass
         latency = int((time.monotonic() - t0) * 1000)

@@ -60,6 +60,8 @@ services:
       NEO4J_PASSWORD: password
       QDRANT_URL: http://qdrant:6333
       LOG_LEVEL: INFO
+    env_file:
+      - .env
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

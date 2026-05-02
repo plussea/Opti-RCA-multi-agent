@@ -1,0 +1,377 @@
+________________________________________
+光网络故障根因定位知识库 - 精炼提取文档
+一、实体提取清单（符合预定义Schema）
+1. 告警实例（Alarm）- 共64个核心告警
+表格
+复制
+告警ID	告警名称	告警级别	告警类型	关键定位参数	所属设备类型
+ALM-001	B1_EXC	次要	服务质量	光口号、通道号	OTU单板
+ALM-002	BD_STATUS	重要	设备	槽位号	单板/子架
+ALM-003	BEFFEC_EXC	重要	服务质量	光口号、通道号	OTU单板
+ALM-004	BIOS_STATUS	重要	环境	单板ID	主控板
+ALM-005	BOOTROM_BAD	重要	设备	0x01=基本BIOS, 0x02=扩展BIOS	主控板
+ALM-006	BP_ODU_LOFLOM	紧急	设备	单板ID、光口号、通道类型、时隙编号	线路板
+ALM-007	BUS_ERR	紧急	设备	子架号、槽位号、总线类型、故障类型	交叉板/业务板
+ALM-008	CHAN_LOS	紧急	设备	光口号、通道号	MCA单板
+ALM-009	CLIENT_PORT_PS	重要	通信	保护组ID	OTU单板
+ALM-010	COMMUN_FAIL	重要	设备	通道号(0x03/0x04=主控通道)	主控板/业务板
+ALM-011	DBMS_ERROR	重要	处理	数据库ID、存储区类型	主控板
+ALM-012	FAN_FAIL	重要	设备	风扇盒ID	风扇板
+ALM-013	FAN_FAULT	次要	设备	风扇盒ID	风扇板
+ALM-014	HARD_BAD	紧急	设备	故障类型(0x01-0x46)、槽位号	各类单板
+ALM-015	HARD_ERR	次要	设备	故障类型(0x01-0x31)、槽位号	各类单板
+ALM-016	HARD_NONSUPPORT	紧急	通信	功能代码	各类单板
+ALM-017	ICR_SATURATED	紧急	端口	板位号、子卡号、光口号	相干接收模块
+ALM-018	IN_PWR_HIGH	紧急	设备	光口号	各类光口
+ALM-019	IN_PWR_LOW	紧急	设备	光口号	各类光口
+ALM-020	INNER_COMMUN_MISCON	重要	设备	告警类型(0x16/0x17)、槽位号	主控板
+ALM-021	INSUFFCNT_FLSH_SPACE	紧急	处理失败	Flash空间类型(0x00/0x01)	主控板
+ALM-022	LAN_LOC	重要	通信	网口类型(G1/G2/FE/NM/ETH1/ETH2)	主控板/EFI板
+ALM-023	LASER_MOD_ERR	重要	设备	光模块类型代码	各类光口
+ALM-024	LASER_MODULE_MISMATCH	重要	设备	光口号	各类光口
+ALM-025	LICENSE_UPDATE_NEEDED	重要	网元	License类型、子架ID	网元级
+ALM-026	LINK_ERR	紧急	通信	端口号、通道号	以太网端口
+ALM-027	LOCAL_FAULT	紧急	通信	光口号	客户侧端口
+ALM-028	LPT_ACTIVE	重要	通信	保护组ID	数据业务板
+ALM-029	LSR_WILL_DIE	紧急	设备	光口号	激光器模块
+ALM-030	MEM_OVER	重要	处理	越限类型(0x01-0x04)、进程ID	各类单板
+ALM-031	MOD_COM_FAIL	紧急	设备	光模块类型、光口号	各类光口
+ALM-032	MS_AIS	重要	通信	光口号	SDH业务板
+ALM-033	MS_RDI	次要	通信	光口号	SDH业务板
+ALM-034	MUT_LOS	紧急	通信	光口号、通道号	合波/分波板
+ALM-035	NEBD_XC_DIF	紧急	处理	子架号、槽位号、交叉类型(0x01/0x02)	交叉板
+ALM-036	NO_ELABEL	提示	设备	载体类型(0x00-0x04)、载体ID	各类单板
+ALM-037	OA_LOW_GAIN	紧急	服务质量	光口号	光放大板(OAU/RAU/SRAU)
+ALM-038	ODU_SNCP_PS	重要	通信	保护组ID、工作/保护通道标识	OTN业务板
+ALM-039	ODU_SNCP_WEAK	次要	处理	板位号、子卡号、光口号、通道号、故障类型(0x00/0x02/0x03)	OTN业务板
+ALM-040	ODUk_LOFLOM	紧急	通信	光口号、通道号(k=0/1/2/3/4/25/FLEX)	OTN业务板
+ALM-041	ODUk_PM_EXC	重要	通信	光口号、通道号(k=3)	OTN业务板
+ALM-042	OPA_FAIL_INDI	重要	处理	波长中心频率、交叉宿单板位置	光交叉连接
+ALM-043	OTUk_LOF	紧急	通信	光口号、通道号(k=0/1/2/3/4/25)	OTN业务板
+ALM-044	OUT_PWR_HIGH	重要	设备	光口号	各类发光口
+ALM-045	PORT_MODULE_OFFLINE	重要	设备	光口号	各类光口
+ALM-046	POWER_DIFF_OVER	重要	设备	倒换类型(0x00/0x02)、通道光口	保护倒换单元
+ALM-047	POWER_FAIL	重要	设备	电源状态代码(0x03-0x6E)	PIU/PSU/主控板
+ALM-048	PUMP_COOL_EXC	紧急	设备	制冷电流状态(0x01/0x02)	泵浦激光器
+ALM-049	R_LOF	紧急	通信	光口号	SDH/OTN业务板
+ALM-050	R_LOS	紧急	通信	光口号	各类接收光口
+ALM-051	R_SLIP	重要	设备	光口号	OSC单板
+ALM-052	REM_SF	次要	通信	光口号	客户侧端口
+ALM-053	REMOTE_FAULT	次要	通信	光口号	客户侧端口
+ALM-054	REJECTION_RATIO_ABNORMAL	紧急	端口	板位号、子卡号、光口号、异常阈值	相干模块
+ALM-055	SECU_ALM	重要	安全	无	网元级
+ALM-056	SUBRACK_ID_CONFLICT	紧急	设备	冲突子架ID	子架级
+ALM-057	SUM_INPWR_LOW	重要	通信	光口号	合波接收单元
+ALM-058	SWDL_CHGMNG_NOMATCH	紧急	设备	无	主控板
+ALM-059	SWDL_NEPKGCHECK	紧急	处理	无	主控板
+ALM-060	SYNC_C_LOS	提示	设备	子架号、板位号、端口号	时钟源/业务板
+ALM-061	TEMP_OVER	重要	设备	越限类型(0x00/0x01/0x02)、温度值	各类单板
+ALM-062	TF	紧急	设备	光口号	激光器模块
+ALM-063	WRG_BD_TYPE	重要	设备	无	各类单板
+ALM-064	XCP_DEGRADE	重要	设备	子架号、槽位号、保护状态(0x0c/0x0e/0x0f)	交叉板
+________________________________________
+2. 故障类型（Fault）- 根因故障与衍生故障分类
+根因故障（Root Cause Faults）
+表格
+复制
+故障ID	故障名称	故障类别	定位特征	常见根因告警
+FAULT-001	光模块损坏	硬件故障	可插拔光模块故障	PORT_MODULE_OFFLINE, LASER_MOD_ERR, LSR_WILL_DIE, TF
+FAULT-002	光纤断纤	物理层故障	光功率异常/无光	R_LOS, MUT_LOS, CHAN_LOS
+FAULT-003	单板硬件故障	硬件故障	单板级告警	HARD_BAD, HARD_ERR, BD_STATUS
+FAULT-004	光放大器增益异常	光学故障	增益低于门限	OA_LOW_GAIN
+FAULT-005	输入光功率过高	光学故障	接收光功率>上限	IN_PWR_HIGH
+FAULT-006	输入光功率过低	光学故障	接收光功率<下限	IN_PWR_LOW, SUM_INPWR_LOW
+FAULT-007	激光器老化/故障	硬件故障	发光异常	LSR_WILL_DIE, TF, OUT_PWR_HIGH
+FAULT-008	交叉板故障	硬件故障	交叉连接异常	BUS_ERR, NEBD_XC_DIF, XCP_DEGRADE
+FAULT-009	主控板故障	硬件故障	控制通信异常	COMMUN_FAIL, BOOTROM_BAD, DBMS_ERROR
+FAULT-010	风扇故障	环境故障	散热异常	FAN_FAIL, FAN_FAULT, TEMP_OVER
+FAULT-011	电源故障	供电故障	电压/电流异常	POWER_FAIL
+FAULT-012	时钟故障	同步故障	时钟源丢失	SYNC_C_LOS
+FAULT-013	保护倒换故障	保护故障	保护组异常	CLIENT_PORT_PS, ODU_SNCP_PS, ODU_SNCP_WEAK
+FAULT-014	软件版本不匹配	软件故障	加载失败	SWDL_CHGMNG_NOMATCH, SWDL_NEPKGCHECK
+FAULT-015	配置错误	配置故障	逻辑配置异常	HARD_NONSUPPORT, WRG_BD_TYPE
+FAULT-016	线路衰减过大	传输故障	端到端光功率异常	IN_PWR_LOW, BEFFEC_EXC, ODUk_PM_EXC
+FAULT-017	连接器污损	物理层故障	光功率不稳定	IN_PWR_LOW, BEFFEC_EXC
+FAULT-018	色散补偿不当	光学故障	误码率异常	OTUk_LOF, R_LOF, BEFFEC_EXC
+FAULT-019	子架ID冲突	配置故障	级联通信异常	SUBRACK_ID_CONFLICT, INNER_COMMUN_MISCON
+FAULT-020	通信链路故障	通信故障	板间通信中断	COMMUN_FAIL, INNER_COMMUN_MISCON, LAN_LOC
+衍生故障（Derived Faults）
+表格
+复制
+故障ID	故障名称	触发根因	衍生告警
+DERIV-001	信号丢失	FAULT-002, FAULT-006	R_LOS, MUT_LOS, CHAN_LOS
+DERIV-002	帧丢失/失步	FAULT-018, FAULT-003	R_LOF, OTUk_LOF, ODUk_LOFLOM, BP_ODU_LOFLOM
+DERIV-003	误码越限	FAULT-016, FAULT-017, FAULT-005	B1_EXC, BEFFEC_EXC, ODUk_PM_EXC
+DERIV-004	远端失效指示	FAULT-002, FAULT-006	MS_RDI, REM_SF
+DERIV-005	保护倒换执行	FAULT-013	CLIENT_PORT_PS, ODU_SNCP_PS
+DERIV-006	业务中断	FAULT-002, FAULT-003, FAULT-008	LINK_ERR, LOCAL_FAULT
+________________________________________
+3. 网元设备（Device）- 故障定位最小粒度
+表格
+复制
+设备类型	设备ID示例	关键属性	所属层级	可触发告警
+OTU单板	OTU-A-01, OTU-B-02	波分侧/客户侧光口、FEC模式、业务类型	电层	R_LOS, R_LOF, OTUk_LOF, IN_PWR_HIGH/LOW
+线路板	LINE-01, LINE-02	背板方向、ODUk时隙、通道类型	电层	BP_ODU_LOFLOM, ODUk_LOFLOM
+交叉板	XCS-73, XCS-74	交叉容量、保护组状态、槽位号(73-77)	电层	BUS_ERR, NEBD_XC_DIF, XCP_DEGRADE
+主控板	SCC-70, SCC-78	主备状态、软件版本、通信通道	控制层	COMMUN_FAIL, BOOTROM_BAD, DBMS_ERROR
+光放大板	OAU-01, RAU-02	增益值、输入/输出光功率、泵浦状态	光层	OA_LOW_GAIN, PUMP_COOL_EXC
+合波/分波板	MUX-01, DEMUX-01	通道数、中心波长、插损值	光层	MUT_LOS, CHAN_LOS
+MCA单板	MCA-01	扫描波长范围、分辨率、MON口分光比	光层	CHAN_LOS
+风扇板	FAN-01	转速级别、调速模式、风扇数量	环境层	FAN_FAIL, FAN_FAULT
+电源板	PIU-01, PSU-01	输入电压、输出电流、子卡状态	供电层	POWER_FAIL
+时钟板	CLK-01	时钟源优先级、频偏容限、跟踪状态	同步层	SYNC_C_LOS
+光模块	SFP-01, QSFP-01	速率、波长、传输距离、可插拔性	物理层	PORT_MODULE_OFFLINE, LASER_MOD_ERR
+光纤/尾纤	FIBER-A-B	长度、衰减系数、连接器类型	物理层	R_LOS, IN_PWR_LOW
+DCM模块	DCM-01	色散补偿量、插损、光纤类型匹配	光层	OA_LOW_GAIN, OTUk_LOF
+客户侧设备	CLIENT-01	业务类型、接口速率、协商模式	客户层	LINK_ERR, LOCAL_FAULT
+________________________________________
+4. 拓扑链路（Topology）
+表格
+复制
+链路ID	链路类型	源节点	宿节点	链路属性	承载业务
+LINK-001	光纤连接	OTU-A波分侧	OTU-B波分侧	衰减值、长度、光缆路由	波分业务
+LINK-002	客户侧连接	CLIENT设备	OTU-A客户侧	接口类型、协商模式、业务类型	客户业务
+LINK-003	背板总线	业务板槽位N	交叉板槽位73-77	总线类型(A/B)、槽位号、交叉ID	电层交叉
+LINK-004	主控通信	业务板	主控板(70/78槽位)	通信通道(0x03/0x04)、子架号	管理控制
+LINK-005	级联连接	主子架	从子架	子架ID、级联网线、ETH口	多子架管理
+LINK-006	时钟分发	时钟板	业务板/主控板	时标链路、优先级、质量等级	时钟同步
+LINK-007	保护组链路	工作通道	保护通道	保护类型(1+1/ SNCP)、倒换模式	保护业务
+LINK-008	合波通道	OTU单波	MUX合波口	波长、光功率、通道号	多波合路
+LINK-009	分波通道	DEMUX分波口	OTU单波	波长、光功率、通道号	多波分路
+LINK-010	光监控信道	OSC东向	OSC西向	监控波长、传输速率、链路状态	网管监控
+________________________________________
+二、核心关系提取（符合预定义Schema的6类关系）
+1. is_caused_by - 衍生告警/故障 → 根因告警/故障（高权重）
+表格
+复制
+头实体	关系	尾实体	置信度	来源文档
+R_LOS (信号丢失)	is_caused_by	光纤断纤	0.95	2.50节
+R_LOS (信号丢失)	is_caused_by	输入光功率过低	0.90	2.50节
+R_LOF (帧丢失)	is_caused_by	色散补偿不当	0.85	2.49节
+B1_EXC (误码越限)	is_caused_by	输入光功率异常	0.88	2.1节
+BEFFEC_EXC (FEC误码越限)	is_caused_by	光放大器增益异常	0.82	2.3节
+ODUk_LOFLOM	is_caused_by	单板硬件故障	0.80	2.40节
+MS_RDI (远端失效)	is_caused_by	对端R_LOS/R_LOF	0.92	2.33节
+CLIENT_PORT_PS (保护倒换)	is_caused_by	工作通道故障	0.90	2.9节
+ODU_SNCP_PS	is_caused_by	工作通道业务故障	0.90	2.38节
+TEMP_OVER (温度越限)	is_caused_by	风扇故障	0.85	2.61节
+COMMUN_FAIL	is_caused_by	主控板故障	0.88	2.10节
+BUS_ERR	is_caused_by	交叉板故障	0.85	2.7节
+LINK_ERR	is_caused_by	输入光功率异常	0.80	2.26节
+HARD_BAD	is_caused_by	单板硬件故障	0.90	2.14节
+OA_LOW_GAIN	is_caused_by	光放大器增益异常	0.95	2.37节
+2. triggers - 根因告警 → 衍生告警（时序传播）（中权重）
+表格
+复制
+头实体	关系	尾实体	传播时序	来源文档
+R_LOS	triggers	MS_RDI	先R_LOS后MS_RDI	2.33节
+R_LOF	triggers	MS_RDI	先R_LOF后MS_RDI	2.33节
+光纤断纤	triggers	R_LOS	物理层→信号层	2.50节
+输入光功率过低	triggers	BEFFEC_EXC	功率→误码	2.3节
+激光器老化	triggers	LSR_WILL_DIE	渐进式恶化	2.29节
+激光器老化	triggers	TF	渐进式恶化	2.62节
+风扇故障	triggers	TEMP_OVER	散热→温度	2.61节
+TEMP_OVER	triggers	BEFFEC_EXC	温度→误码	2.3节
+主控板故障	triggers	COMMUN_FAIL	控制→通信	2.10节
+交叉板故障	triggers	BUS_ERR	交叉→总线	2.7节
+单板硬件故障	triggers	HARD_ERR	硬件→告警	2.15节
+单板硬件故障	triggers	HARD_BAD	硬件→告警	2.14节
+工作通道故障	triggers	CLIENT_PORT_PS	故障→倒换	2.9节
+工作通道故障	triggers	ODU_SNCP_PS	故障→倒换	2.38节
+光模块故障	triggers	MOD_COM_FAIL	模块→通信	2.31节
+3. is_located_at - 告警/故障 → 所属设备/端口（高权重）
+表格
+复制
+头实体	关系	尾实体	定位粒度	来源文档
+R_LOS	is_located_at	OTU单板-波分侧光口	光口级	2.50节
+R_LOS	is_located_at	客户侧设备-输出端口	端口级	2.50节
+IN_PWR_HIGH/LOW	is_located_at	具体光口号	光口级	2.18/2.19节
+BD_STATUS	is_located_at	具体槽位号	槽位级	2.2节
+COMMUN_FAIL	is_located_at	主控板-通信通道(0x03/0x04)	通道级	2.10节
+BUS_ERR	is_located_at	交叉板-槽位号	槽位级	2.7节
+HARD_BAD	is_located_at	故障单板-槽位号	槽位级	2.14节
+FAN_FAIL	is_located_at	风扇盒	设备级	2.12节
+POWER_FAIL	is_located_at	PIU/PSU电源板	设备级	2.47节
+TEMP_OVER	is_located_at	过热单板-槽位号	槽位级	2.61节
+CHAN_LOS	is_located_at	MCA单板-光口号	光口级	2.8节
+ODU_SNCP_PS	is_located_at	保护组-工作/保护通道	通道级	2.38节
+XCP_DEGRADE	is_located_at	交叉板-槽位号(73-77)	槽位级	2.64节
+4. is_connected_upstream/downstream - 设备间拓扑连接（高权重）
+表格
+复制
+头实体	关系	尾实体	连接类型	来源文档
+OTU-A(上游)	is_connected_upstream	OTU-B(下游)	波分侧光纤连接	2.1节
+客户侧设备	is_connected_upstream	OTU-A客户侧	客户侧连接	2.1节
+MUX合波板	is_connected_upstream	OAU光放大板	合波→放大	2.34节
+OAU光放大板	is_connected_upstream	线路光纤	放大→传输	2.37节
+线路光纤	is_connected_upstream	下游站点OAU	站间传输	2.37节
+业务板槽位N	is_connected_upstream	交叉板槽位73-77	背板总线连接	2.7节
+主子架主控	is_connected_upstream	从子架主控	级联连接	2.10节
+时钟板	is_connected_upstream	业务板/主控板	时钟分发	2.60节
+OSC东向	is_connected_downstream	OSC西向	监控信道	2.51节
+5. belongs_to_link - 设备/端口 → 所属光链路（中权重）
+表格
+复制
+头实体	关系	尾实体	链路角色	来源文档
+OTU-A波分侧光口	belongs_to_link	LINK-001(光纤连接)	源节点	2.1节
+OTU-B波分侧光口	belongs_to_link	LINK-001(光纤连接)	宿节点	2.1节
+OTU-A客户侧光口	belongs_to_link	LINK-002(客户侧连接)	宿节点	2.1节
+业务板槽位N	belongs_to_link	LINK-003(背板总线)	业务接入点	2.7节
+交叉板槽位73	belongs_to_link	LINK-003(背板总线)	交叉节点	2.7节
+主控板槽位70/78	belongs_to_link	LINK-004(主控通信)	控制节点	2.10节
+工作通道OTU	belongs_to_link	LINK-007(保护组链路)	工作通道	2.9节
+保护通道OTU	belongs_to_link	LINK-007(保护组链路)	保护通道	2.9节
+6. has_alert - 设备/端口 → 可触发的告警类型（中权重）
+表格
+复制
+头实体	关系	尾实体	触发条件	来源文档
+OTU单板-波分侧	has_alert	R_LOS	接收无光	2.50节
+OTU单板-波分侧	has_alert	R_LOF	帧失步	2.49节
+OTU单板-波分侧	has_alert	IN_PWR_HIGH	输入功率>上限	2.18节
+OTU单板-波分侧	has_alert	IN_PWR_LOW	输入功率<下限	2.19节
+OTU单板-波分侧	has_alert	OTUk_LOF	OTN帧丢失	2.43节
+OTU单板-客户侧	has_alert	LINK_ERR	以太网链路失败	2.26节
+OTU单板-客户侧	has_alert	LOCAL_FAULT	近端缺陷	2.27节
+光放大板(OAU)	has_alert	OA_LOW_GAIN	增益<标称值-3dB	2.37节
+光放大板(RAU)	has_alert	PUMP_COOL_EXC	泵浦制冷电流异常	2.48节
+合波板(MUX)	has_alert	MUT_LOS	合路信号丢失	2.34节
+MCA单板	has_alert	CHAN_LOS	单波长丢失	2.8节
+交叉板	has_alert	BUS_ERR	背板总线错误	2.7节
+交叉板	has_alert	XCP_DEGRADE	保护能力降级	2.64节
+主控板	has_alert	COMMUN_FAIL	板间通信失效	2.10节
+主控板	has_alert	BOOTROM_BAD	BIOS损坏	2.5节
+风扇板	has_alert	FAN_FAIL	多风扇失效	2.12节
+电源板	has_alert	POWER_FAIL	电源异常	2.47节
+时钟板	has_alert	SYNC_C_LOS	时钟源丢失	2.60节
+________________________________________
+三、故障定位推理规则（供LLM调用）
+规则1：光功率异常定位链
+plain
+复制
+IF 告警 IN {R_LOS, IN_PWR_LOW, BEFFEC_EXC, ODUk_PM_EXC} THEN
+    定位方向: 逆着信号流向上游追溯
+    检查点: 
+        1. 本站接收光功率 (正常范围?)
+        2. 上游站发送光功率 (正常范围?)
+        3. 线路衰减值 (工程设计值?)
+        4. 光纤连接器 (污损?)
+        5. 光衰减器 (配置过大?)
+    根因候选: [光纤断纤, 线路衰减过大, 连接器污损, 上游单板故障]
+规则2：帧丢失类告警定位链
+plain
+复制
+IF 告警 IN {R_LOF, OTUk_LOF, ODUk_LOFLOM} THEN
+    定位方向: 端到端帧结构检查
+    检查点:
+        1. 对接双方业务类型匹配?
+        2. FEC类型一致?
+        3. 光功率正常?
+        4. 色散补偿适当?
+        5. 单板硬件故障?
+    根因候选: [色散补偿不当, 业务类型不匹配, 光模块故障, 单板故障]
+规则3：硬件故障定位链
+plain
+复制
+IF 告警 IN {HARD_BAD, HARD_ERR, BD_STATUS} THEN
+    定位方向: 单板级故障隔离
+    检查点:
+        1. 单板插紧状态?
+        2. 软复位/硬复位有效?
+        3. 光模块可插拔?
+        4. 温度异常?
+        5. 电源正常?
+    根因候选: [单板硬件故障, 光模块故障, 背板故障, 电源故障]
+规则4：保护倒换类告警定位链
+plain
+复制
+IF 告警 IN {CLIENT_PORT_PS, ODU_SNCP_PS} THEN
+    定位方向: 保护组状态分析
+    检查点:
+        1. 倒换原因(强制/人工/自动)?
+        2. 工作通道告警?
+        3. 保护通道正常?
+        4. 交叉配置存在?
+    根因候选: [工作通道故障, 外部倒换命令, 交叉配置缺失]
+规则5：通信类告警定位链
+plain
+复制
+IF 告警 IN {COMMUN_FAIL, BUS_ERR, INNER_COMMUN_MISCON} THEN
+    定位方向: 通信路径分段排查
+    检查点:
+        1. 告警参数定位通道/槽位?
+        2. 主控板状态?
+        3. 交叉板状态?
+        4. 子架级联状态?
+        5. 背板总线状态?
+    根因候选: [主控板故障, 交叉板故障, 子架ID冲突, 背板故障]
+________________________________________
+四、知识校验与权重标注
+高权重知识（定位核心）
+•	因果关系: is_caused_by, triggers 涉及光功率→误码→帧丢失的传播链
+•	定位关系: is_located_at 精确到光口号/槽位号/通道号的映射
+•	拓扑关系: is_connected_upstream/downstream 上下游设备连接
+中权重知识（辅助定位）
+•	告警能力: has_alert 设备可触发告警类型
+•	链路归属: belongs_to_link 设备所属链路
+过滤内容（非定位相关）
+•	❌ 商务参数、硬件尺寸功耗（文档中已删除）
+•	❌ 通用光通信物理原理（如激光器工作原理详细描述）
+•	❌ 安全规范、管理条例（版权信息、免责声明）
+•	❌ 操作步骤中的通用维护流程（非定位相关的操作细节）
+•	❌ 参考信息中的标准文档引用（ITU-T G.709等，仅保留关键参数）
+________________________________________
+五、标准化三元组数据集（JSON格式示例）
+JSON
+复制
+{
+  "triples": [
+    {
+      "head": "R_LOS",
+      "head_type": "告警实例",
+      "relation": "is_caused_by",
+      "tail": "光纤断纤",
+      "tail_type": "故障类型",
+      "weight": "高",
+      "source": "2.50节",
+      "confidence": 0.95
+    },
+    {
+      "head": "OTU-A-波分侧光口",
+      "head_type": "网元设备",
+      "relation": "has_alert",
+      "tail": "R_LOS",
+      "tail_type": "告警实例",
+      "weight": "中",
+      "source": "2.50节",
+      "confidence": 0.90
+    },
+    {
+      "head": "R_LOS",
+      "head_type": "告警实例",
+      "relation": "triggers",
+      "tail": "MS_RDI",
+      "tail_type": "告警实例",
+      "weight": "中",
+      "source": "2.33节",
+      "confidence": 0.92
+    },
+    {
+      "head": "OTU-A",
+      "head_type": "网元设备",
+      "relation": "is_connected_upstream",
+      "tail": "OTU-B",
+      "tail_type": "网元设备",
+      "weight": "高",
+      "source": "2.1节",
+      "confidence": 0.95
+    }
+  ]
+}
+________________________________________
+六、交付物清单
+1.	标准化三元组数据集: optical_alarm_triples.json（包含上述所有实体和关系）
+2.	告警定位规则库: fault_location_rules.json（5大类定位规则）
+3.	实体归一化映射表: entity_normalization.csv（同义实体合并，如"LOS告警"↔"信号丢失告警"）
+4.	Neo4j入库脚本: import_to_neo4j.cypher（Cypher语句批量创建节点和边）
+5.	Schema校验报告: 确认100%符合预定义Schema，无超范围内容
+

@@ -47,7 +47,7 @@ class PerceptionAgent(BaseAgent):
             {
                 "type": "alarm",
                 "source": r.ne_name,
-                "code": r.alarm_code or r.alarm_name or "unknown",
+                "alarm_name": r.alarm_name or "unknown",
                 "value": r.severity.value if r.severity else "unknown",
                 "field": "location",
                 "time": r.occur_time.isoformat() if r.occur_time else None,

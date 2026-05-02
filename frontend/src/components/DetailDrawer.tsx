@@ -54,7 +54,7 @@ function DiagnosisPanel({ session }: { session: Session }) {
                     <span className="text-zinc-600 mt-0.5">›</span>
                     <div>
                       <span className="text-zinc-300">{e.source}</span>
-                      {e.code && <span className="text-zinc-500 ml-1 font-mono text-xs">{e.code}</span>}
+                      {e.alarm_name && <span className="text-zinc-500 ml-1 font-mono text-xs">{e.alarm_name}</span>}
                       {e.value && <span className="text-zinc-400 ml-1">{e.value}</span>}
                     </div>
                   </div>

@@ -174,7 +174,7 @@ def _build_result_response(session: Session) -> Dict:
     )
     return {
         "session_id": session.session_id,
-        "status": session.status,
+        "status": session.status.value,
         "structured_input": structured_input.model_dump(),
         "diagnosis": session.diagnosis_result.model_dump() if session.diagnosis_result else None,
         "impact": session.impact.model_dump() if session.impact else None,
@@ -280,4 +280,4 @@ async def list_sessions() -> List[Dict[str, Any]]:
 @router.get("/sessions/{session_id}/stream")
 async def stream_session(session_id: str):
     """SSE stream"""
-    return sse_stream(session_id)
+    return await sse_stream(session_id)

@@ -17,22 +17,24 @@ export type SessionStatus =
 
 export interface AlarmRecord {
   ne_name: string;
-  alarm_code?: string;
   alarm_name?: string;
   severity?: string;
   occur_time?: string;
   shelf?: string;
   slot?: string;
   board_type?: string;
+  topology_id?: string;
+  location?: string;
   raw_data: Record<string, unknown>;
 }
 
 export interface Evidence {
   type: string;
   source: string;
-  code?: string;
+  alarm_name?: string;
   field?: string;
   value?: string;
+  time?: string;
 }
 
 export interface DiagnosisResult {

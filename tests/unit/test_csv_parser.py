@@ -15,10 +15,10 @@ class TestNormalizeHeader:
         assert normalize_header("网元") == "ne_name"
         assert normalize_header("设备名") == "ne_name"
 
-    def test_alarm_code_variants(self):
-        assert normalize_header("告警码") == "alarm_code"
-        assert normalize_header("alarm_code") == "alarm_code"
-        assert normalize_header("告警编号") == "alarm_code"
+    def test_alarm_name_variants(self):
+        assert normalize_header("告警名称") == "alarm_name"
+        assert normalize_header("alarm_name") == "alarm_name"
+        assert normalize_header("告警") == "alarm_name"
 
     def test_severity_variants(self):
         assert normalize_header("级别") == "severity"
@@ -79,21 +79,21 @@ class TestParseTime:
 
 class TestIngestCSV:
     def test_basic_csv(self):
-        content = b"ne_name,alarm_code,alarm_name,severity,occur_time\nNE-BJ-01,LINK_FAIL,link_fail,Critical,2026-04-28 14:23:00\nNE-BJ-02,POWER_LOW,power_low,Major,2026-04-28 14:25:00"
+        content = b"ne_name,alarm_name,severity,occur_time\nNE-BJ-01,LINK_FAIL,Critical,2026-04-28 14:23:00\nNE-BJ-02,POWER_LOW,Major,2026-04-28 14:25:00"
         records, uncertain = ingest_csv(content)
 
         assert len(records) == 2
         assert records[0].ne_name == "NE-BJ-01"
-        assert records[0].alarm_code == "LINK_FAIL"
+        assert records[0].alarm_name == "LINK_FAIL"
         assert records[0].severity.value == "Critical"
 
     def test_heterogeneous_headers(self):
-        content = "网元名称,告警码,告警,级别,发生时间\nNE-SH-01,LOS,LOS,严重,2026/04/28 15:00:00".encode()
+        content = "网元名称,告警名称,级别,发生时间\nNE-SH-01,R_LOS,严重,2026/04/28 15:00:00".encode()
         records, uncertain = ingest_csv(content)
 
         assert len(records) == 1
         assert records[0].ne_name == "NE-SH-01"
-        assert records[0].alarm_code == "LOS"
+        assert records[0].alarm_name == "R_LOS"
 
     def test_missing_alarm_info(self):
         content = b"ne_name,severity\nNE-GZ-01,Major"
@@ -105,7 +105,7 @@ class TestIngestCSV:
 
     def test_gbk_encoding(self):
         # UTF-8 with BOM
-        content = "﻿网元,告警码,级别\nNE-01,LINK_FAIL,Critical".encode("utf-8-sig")
+        content = "﻿网元名称,告警名称,级别\nNE-01,LINK_FAIL,Critical".encode("utf-8-sig")
         records, _ = ingest_csv(content)
         assert len(records) == 1
         assert records[0].ne_name == "NE-01"

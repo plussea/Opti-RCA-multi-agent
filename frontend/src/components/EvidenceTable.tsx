@@ -18,17 +18,24 @@ const columns: ColumnDef<AlarmRecord>[] = [
     ),
   },
   {
-    accessorKey: "alarm_code",
-    header: "告警码",
-    cell: ({ row }) => (
-      <span className="font-mono text-xs text-zinc-400">{row.getValue("alarm_code") ?? "—"}</span>
-    ),
-  },
-  {
     accessorKey: "alarm_name",
     header: "告警名称",
     cell: ({ row }) => (
-      <span className="text-xs">{row.getValue("alarm_name") ?? "—"}</span>
+      <span className="text-xs font-medium text-amber-400">{row.getValue("alarm_name") ?? "—"}</span>
+    ),
+  },
+  {
+    accessorKey: "topology_id",
+    header: "拓扑ID",
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-zinc-500">{row.getValue("topology_id") ?? "—"}</span>
+    ),
+  },
+  {
+    accessorKey: "location",
+    header: "定位信息",
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-zinc-400 truncate max-w-[200px] block">{row.getValue("location") ?? "—"}</span>
     ),
   },
   {

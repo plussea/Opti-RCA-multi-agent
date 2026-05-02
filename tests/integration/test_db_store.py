@@ -87,14 +87,12 @@ def _make_session(sid: str, **kwargs) -> Session:
         "structured_data": [
             AlarmRecord(
                 ne_name="NE-BJ-01",
-                alarm_code="LINK_FAIL",
-                alarm_name="链路失效",
+                alarm_name="LINK_FAIL",
                 severity=Severity.CRITICAL,
             ),
             AlarmRecord(
                 ne_name="NE-SH-01",
-                alarm_code="POWER_LOW",
-                alarm_name="电源电压低",
+                alarm_name="POWER_LOW",
                 severity=Severity.WARNING,
             ),
         ],
@@ -219,7 +217,7 @@ class TestDBSessionCreate:
         assert retrieved.input_type == InputType.CSV
         assert len(retrieved.structured_data) == 2
         assert retrieved.structured_data[0].ne_name == "NE-BJ-01"
-        assert retrieved.structured_data[0].alarm_code == "LINK_FAIL"
+        assert retrieved.structured_data[0].alarm_name == "LINK_FAIL"
 
     @pytest.mark.asyncio
     async def test_create_persists_all_fields(self, db_store: DBSessionStore):

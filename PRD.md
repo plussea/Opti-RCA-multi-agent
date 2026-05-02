@@ -23,7 +23,7 @@ OmniOps is an event-driven, Multi-Agent fault diagnosis system that:
 
 ### Ingestion & Perception
 
-1. As a network engineer, I want to upload a CSV exported from a network management system, so that alarms are automatically parsed into structured records with standardized field names (ne_name, alarm_code, severity, topology_id, location)
+1. As a network engineer, I want to upload a CSV exported from a network management system, so that alarms are automatically parsed into structured records with standardized field names (ne_name, alarm_name, severity, topology_id, location)
 2. As a network engineer, I want the system to normalize Chinese severity labels (紧急→Critical, 重要→Major, 次要→Minor), so that alarm filtering and triage works consistently regardless of source format
 3. As a network engineer, I want the system to automatically extract `topology_id` from the CSV and load the corresponding topology JSON, so that downstream agents can query the mesh/r topology structure
 4. As a network engineer, I want CSV table header aliases (设备→ne_name, 定位信息→location, 拓扑 id→topology_id) to be handled automatically, so that I don't need to reformat CSVs before upload
@@ -40,10 +40,10 @@ OmniOps is an event-driven, Multi-Agent fault diagnosis system that:
 ### Diagnosis & Root Cause Analysis
 
 11. As the system, I want the Diagnosis Agent to match known optical network alarm codes (OTS_LOS, OCH_LOS_P, ETHOAM_SELF_LOOP, LSR_WILL_DIE, DBMS_ERROR, etc.) to predefined root cause patterns, so that diagnosis completes without requiring an LLM call
-12. As the system, I want the Diagnosis Agent to fall back to alarm-name matching when alarm_code is missing, so that CSVs without explicit alarm codes still receive a diagnosis
+12. As the system, I want the Diagnosis Agent to use alarm-name based matching with rule patterns, so that CSVs with alarm_name field receive a diagnosis even without an alarm_code field
 13. As the system, I want the Diagnosis Agent to invoke an LLM (OpenRouter / OpenAI / Anthropic / MiniMax via Model Registry) when no rule matches, so that novel alarm combinations are handled intelligently
-14. As the system, I want the Diagnosis Agent to query the RAG vector store for similar historical cases (Top-3 by alarm_code similarity), so that the LLM has contextual grounding from past incidents
-15. As the system, I want diagnostic confidence to be assessed and uncertainty flags raised (e.g., "partial alarm codes missing"), so that downstream agents and humans know how much to trust the result
+14. As the system, I want the Diagnosis Agent to query the RAG vector store for similar historical cases (Top-3 by alarm_name similarity), so that the LLM has contextual grounding from past incidents
+15. As the system, I want diagnostic confidence to be assessed and uncertainty flags raised (e.g., "partial alarm_names uncertain"), so that downstream agents and humans know how much to trust the result
 
 ### Impact Assessment & Topology
 
@@ -136,7 +136,7 @@ All agents write to Redis immediately for fast reads by the SSE stream. PostgreS
 ### Database Schema
 
 - `sessions`: session_id (PK), input_type, status, structured_data (JSON), diagnosis_result (JSON), impact (JSON), suggestion (JSON), human_feedback (JSON), perception_metadata (JSON), created_at, updated_at
-- `alarm_records`: id (PK, autoincrement), session_id (FK→sessions), ne_name, alarm_code, alarm_name, severity, occur_time, shelf, slot, board_type, topology_id, location, raw_data (JSON), created_at
+- `alarm_records`: id (PK, autoincrement), session_id (FK→sessions), ne_name, alarm_name, severity, occur_time, shelf, slot, board_type, topology_id, location, raw_data (JSON), created_at
 - `agent_conversations`: id (PK), session_id (FK→sessions), agent_name, step_order, llm_input (JSON), llm_output (JSON), cognitive_summary (JSON), tokens_used, model_name, duration_ms, error_message, created_at
 - `feedback_records`: id (PK), session_id (FK→sessions), decision, actual_action, effectiveness, created_at
 - `knowledge_embeddings`: id (UUID), entry_id (unique), alarm_pattern (JSON), root_cause (text), suggested_actions (JSON), required_tools (JSON), fallback_plan (text), risk_level, hit_count, effectiveness_rate, embedding (vector 1536), created_at, updated_at

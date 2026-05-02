@@ -18,11 +18,6 @@ HEADER_MAPPINGS: Dict[str, str] = {
     r"设备名": "ne_name",
     r"device[_]?name": "ne_name",
     r"^设备$": "ne_name",          # 光网络 CSV: "设备" 列 → ne_name
-    # 告警码变体
-    r"告警码": "alarm_code",
-    r"alarm[_]?code": "alarm_code",
-    r"告警编号": "alarm_code",
-    r"告警ID": "alarm_code",
     # 告警名称变体
     r"告警名[称]?": "alarm_name",
     r"告警$": "alarm_name",        # 仅"告警"本身，不含后缀
@@ -157,10 +152,6 @@ def ingest_csv(content: bytes) -> Tuple[List[AlarmRecord], List[Dict[Any, Any]]]
         elif df.shape[0] > 0:
             record_dict["ne_name"] = str(row.iloc[0]).strip()
 
-        if "alarm_code" in df.columns:
-            code = str(row["alarm_code"]).strip()
-            record_dict["alarm_code"] = code if code and code != "nan" else None
-
         if "alarm_name" in df.columns:
             name = str(row["alarm_name"]).strip()
             record_dict["alarm_name"] = name if name and name != "nan" else None
@@ -191,7 +182,7 @@ def ingest_csv(content: bytes) -> Tuple[List[AlarmRecord], List[Dict[Any, Any]]]
         record_dict["raw_data"] = row.to_dict()
 
         # 检查空值标记
-        if not record_dict.get("alarm_code") and not record_dict.get("alarm_name"):
+        if not record_dict.get("alarm_name"):
             uncertain_fields.append({
                 "type": "missing_alarm_info",
                 "row": idx,

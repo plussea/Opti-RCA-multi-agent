@@ -21,7 +21,7 @@ class BaseEvent(BaseModel):
 class DiagnosisRequestedEvent(BaseEvent):
     """诊断 Agent 待处理"""
     event_type: str = "diagnosis_requested"
-    alarm_codes: List[str] = Field(default_factory=list)
+    alarm_names: List[str] = Field(default_factory=list)
     structured_data: List[Dict[str, Any]] = Field(default_factory=list)
     priority: int = 1
 
@@ -95,7 +95,7 @@ class KnowledgeClosureRequestedEvent(BaseEvent):
     """知识闭环待处理"""
     event_type: str = "knowledge_closure_requested"
     root_cause: str = ""
-    alarm_codes: List[str] = Field(default_factory=list)
+    alarm_names: List[str] = Field(default_factory=list)
     suggested_actions: List[Dict[str, Any]] = Field(default_factory=list)
     feedback: Optional[Dict[str, Any]] = None
 

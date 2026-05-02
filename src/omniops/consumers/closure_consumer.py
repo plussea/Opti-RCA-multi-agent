@@ -28,17 +28,17 @@ class ClosureConsumer(BaseConsumer):
             # 知识沉淀：采纳/修改 → 写向量库
             feedback = event.feedback or {}
             if feedback.get("decision") in ("adopted", "modified"):
-                alarm_codes = event.alarm_codes
-                if not alarm_codes and session:
-                    alarm_codes = [
-                        r.alarm_code for r in session.structured_data
-                        if r.alarm_code
+                alarm_names = event.alarm_names
+                if not alarm_names and session:
+                    alarm_names = [
+                        r.alarm_name for r in session.structured_data
+                        if r.alarm_name
                     ]
 
                 try:
                     doc_id = await ingest_knowledge(
                         root_cause=event.root_cause,
-                        alarm_codes=alarm_codes,
+                        alarm_codes=alarm_names,
                         suggested_actions=event.suggested_actions,
                         source_session=session_id,
                     )

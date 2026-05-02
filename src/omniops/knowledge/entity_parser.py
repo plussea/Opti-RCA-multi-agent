@@ -207,12 +207,9 @@ def parse_document(content: str, domain: str = "optical_network") -> Dict[str, A
     return {"nodes": nodes, "relations": relations}
 
 
-def extract_seed_entities(alarm_codes: List[str], alarm_names: List[str]) -> List[str]:
+def extract_seed_entities(alarm_names: List[str]) -> List[str]:
     """从告警列表中提取种子实体（用于 KG 查询）"""
     entities = []
-    for code in alarm_codes:
-        if code:
-            entities.append(normalize_entity(code))
     for name in alarm_names:
         if name:
             entities.append(normalize_entity(name))

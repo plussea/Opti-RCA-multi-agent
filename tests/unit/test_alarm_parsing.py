@@ -327,9 +327,9 @@ class TestDiagnosisWithNewPatterns:
         from datetime import datetime
 
         records = [
-            AlarmRecord(ne_name="N4", alarm_code="OTS_LOS", severity=None, topology_id="Topology_mesh10_1"),
-            AlarmRecord(ne_name="N4", alarm_code="OMS_LOS_P", severity=None, topology_id="Topology_mesh10_1"),
-            AlarmRecord(ne_name="N1", alarm_code="OCH_LOS_P", severity=None, topology_id="Topology_mesh10_1"),
+            AlarmRecord(ne_name="N4", alarm_name="OTS_LOS", severity=None, topology_id="Topology_mesh10_1"),
+            AlarmRecord(ne_name="N4", alarm_name="OMS_LOS_P", severity=None, topology_id="Topology_mesh10_1"),
+            AlarmRecord(ne_name="N1", alarm_name="OCH_LOS_P", severity=None, topology_id="Topology_mesh10_1"),
         ]
         session = Session(
             session_id="test_diag_002",

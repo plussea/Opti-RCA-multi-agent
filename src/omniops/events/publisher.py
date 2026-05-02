@@ -95,10 +95,10 @@ class OmniOpsPublisher:
 
     async def publish_diagnosis_requested(self, session: Any) -> None:
         from omniops.events.schemas import DiagnosisRequestedEvent
-        alarm_codes = [r.alarm_code for r in session.structured_data if r.alarm_code]
+        alarm_names = [r.alarm_name for r in session.structured_data if r.alarm_name]
         event = DiagnosisRequestedEvent(
             session_id=session.session_id,
-            alarm_codes=alarm_codes,
+            alarm_names=alarm_names,
             structured_data=[r.model_dump() for r in session.structured_data],
             priority=2,
         )
@@ -192,7 +192,7 @@ class OmniOpsPublisher:
         self,
         session_id: str,
         root_cause: str,
-        alarm_codes: list,
+        alarm_names: list,
         suggested_actions: list,
         feedback: Optional[dict],
     ) -> None:
@@ -200,7 +200,7 @@ class OmniOpsPublisher:
         event = KnowledgeClosureRequestedEvent(
             session_id=session_id,
             root_cause=root_cause,
-            alarm_codes=alarm_codes,
+            alarm_names=alarm_names,
             suggested_actions=suggested_actions,
             feedback=feedback,
         )

@@ -68,7 +68,10 @@ class OpenRouterProvider(BaseProvider):
         )
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"] or ""
+        msg = data["choices"][0]["message"]
+        # nemotron-reasoning models put the answer in "reasoning" field, content may be None
+        content = msg.get("content") or msg.get("reasoning") or ""
+        return content
 
     async def close(self) -> None:
         await self._client.aclose()

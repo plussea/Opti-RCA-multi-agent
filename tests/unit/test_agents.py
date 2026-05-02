@@ -10,9 +10,9 @@ class TestPerceptionAgent:
     @pytest.mark.asyncio
     async def test_process_creates_metadata(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="LINK_FAIL"),
-            AlarmRecord(ne_name="NE-02", alarm_code="LINK_FAIL"),
-            AlarmRecord(ne_name="NE-01", alarm_code="POWER_LOW"),
+            AlarmRecord(ne_name="NE-01", alarm_name="LINK_FAIL"),
+            AlarmRecord(ne_name="NE-02", alarm_name="LINK_FAIL"),
+            AlarmRecord(ne_name="NE-01", alarm_name="POWER_LOW"),
         ]
         session = Session(
             session_id=generate_session_id(),
@@ -34,7 +34,7 @@ class TestDiagnosisAgent:
     @pytest.mark.asyncio
     async def test_rule_based_diagnosis_link_fail(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="OTS_LOS", alarm_name="光发送段信号丢失"),
+            AlarmRecord(ne_name="NE-01", alarm_name="OTS_LOS"),
         ]
         session = Session(
             session_id=generate_session_id(),
@@ -53,7 +53,7 @@ class TestDiagnosisAgent:
     @pytest.mark.asyncio
     async def test_rule_based_diagnosis_power_low(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="LSR_WILL_DIE"),
+            AlarmRecord(ne_name="NE-01", alarm_name="LSR_WILL_DIE"),
         ]
         session = Session(
             session_id=generate_session_id(),
@@ -73,7 +73,7 @@ class TestImpactAgent:
     @pytest.mark.asyncio
     async def test_impact_evaluation(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="LINK_FAIL"),
+            AlarmRecord(ne_name="NE-01", alarm_name="LINK_FAIL"),
         ]
         session = Session(
             session_id=generate_session_id(),
@@ -98,7 +98,7 @@ class TestPlanningAgent:
     @pytest.mark.asyncio
     async def test_generates_structured_suggestion(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="LINK_FAIL"),
+            AlarmRecord(ne_name="NE-01", alarm_name="LINK_FAIL"),
         ]
         session = Session(
             session_id=generate_session_id(),

@@ -48,9 +48,8 @@ class KGQueryService:
         t0 = time.monotonic()
 
         # 1. 提取种子实体
-        alarm_codes = [r.alarm_code for r in structured_data if r.alarm_code]
         alarm_names = [r.alarm_name for r in structured_data if r.alarm_name]
-        seed_entities = extract_seed_entities(alarm_codes, alarm_names)
+        seed_entities = extract_seed_entities(alarm_names)
 
         if not seed_entities:
             logger.warning(f"[KGQuery] No seed entities for session")
@@ -82,9 +81,9 @@ class KGQueryService:
 
         # 4. 规则匹配
         rules: List[Dict[str, Any]] = []
-        if include_rules and alarm_codes:
+        if include_rules and alarm_names:
             try:
-                rules = await self._client.get_rules(alarm_codes)
+                rules = await self._client.get_rules(alarm_names)
             except Exception as e:
                 logger.warning(f"[KGQuery] rules query failed: {e}")
 

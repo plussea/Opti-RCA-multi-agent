@@ -147,7 +147,7 @@ def _build_openrouter(settings: Any) -> BaseProvider:
     config = ProviderConfig(
         api_key=settings.openrouter_api_key,
         base_url="https://openrouter.ai/api/v1",
-        model=settings.openrouter_model,
+        model=settings.llm_model,
         max_tokens=settings.anthropic_max_tokens,
         timeout=60.0,
     )

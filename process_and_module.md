@@ -35,15 +35,6 @@ CSV输入
 
 ---
 
-## 用一个真实案例跑通全流程
-
-**案例**：工程师上传 `alarm_20260429.csv`，内容：
-
-| occur_time | ne_name | shelf | slot | board_type | alarm_code | alarm_name | severity |
-|---|---|---|---|---|---|---|---|
-| 14:23:05 | NE-BJ-01 | 1 | 3 | K1SL64 | LINK_FAIL | 光链路中断 | Critical |
-| 14:23:12 | NE-SH-02 | 2 | 5 | K1SL64 | OTU_LOF | OTU帧丢失 | Critical |
-| 14:24:00 | NE-BJ-01 | 1 | 3 | K1SL64 | POWER_LOW | 光功率低 | Major |
 
 ---
 

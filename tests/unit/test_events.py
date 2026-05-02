@@ -15,14 +15,14 @@ class TestEventSchemas:
     def test_diagnosis_requested_roundtrip(self):
         event = DiagnosisRequestedEvent(
             session_id="sess_001",
-            alarm_codes=["LINK_FAIL", "OTU_LOF"],
-            structured_data=[{"ne_name": "NE-01", "alarm_code": "LINK_FAIL"}],
+            alarm_names=["LINK_FAIL", "OTU_LOF"],
+            structured_data=[{"ne_name": "NE-01", "alarm_name": "LINK_FAIL"}],
             priority=2,
         )
         data = event.model_dump()
         restored = DiagnosisRequestedEvent(**data)
         assert restored.session_id == "sess_001"
-        assert restored.alarm_codes == ["LINK_FAIL", "OTU_LOF"]
+        assert restored.alarm_names == ["LINK_FAIL", "OTU_LOF"]
         assert restored.priority == 2
 
     def test_diagnosis_completed_roundtrip(self):
@@ -65,7 +65,7 @@ class TestEventSchemas:
         event = KnowledgeClosureRequestedEvent(
             session_id="sess_001",
             root_cause="光纤劣化",
-            alarm_codes=["LINK_FAIL", "OTU_LOF"],
+            alarm_names=["LINK_FAIL", "OTU_LOF"],
             suggested_actions=[
                 {"step": 1, "action": "OTDR测试", "estimated_time": "15min"},
                 {"step": 2, "action": "更换光纤", "estimated_time": "30min"},

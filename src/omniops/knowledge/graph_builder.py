@@ -50,8 +50,8 @@ class GraphBuilder:
         for node in parsed.get("nodes", []):
             if node.get("label") == "Fault" and node.get("common_alarms"):
                 fault_id = node.get("id", node.get("name"))
-                for alarm_code in node["common_alarms"]:
-                    src = normalize_entity(alarm_code)
+                for alarm_name in node["common_alarms"]:
+                    src = normalize_entity(alarm_name)
                     if src and fault_id:
                         relations.append({
                             "src": src,
@@ -134,7 +134,7 @@ class GraphBuilder:
 
         node_ids = []
         for n in raw_nodes:
-            nid = n.get("code") or n.get("id") or n.get("name")
+            nid = n.get("name") or n.get("id")
             if nid:
                 node_ids.append(nid)
 

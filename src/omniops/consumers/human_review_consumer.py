@@ -126,9 +126,9 @@ class HumanReviewConsumer(BaseConsumer):
         await publisher.publish_knowledge_closure_requested(
             session_id=session_id,
             root_cause=session.diagnosis_result.root_cause if session and session.diagnosis_result else "",
-            alarm_codes=[
-                r.alarm_code for r in (session.structured_data if session else [])
-                if r.alarm_code
+            alarm_names=[
+                r.alarm_name for r in (session.structured_data if session else [])
+                if r.alarm_name
             ],
             suggested_actions=[
                 a.model_dump() for a in (session.suggestion.suggested_actions if session and session.suggestion else [])

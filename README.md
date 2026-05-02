@@ -221,7 +221,7 @@ All providers work out of the box: just set `LLM_PROVIDER` and the API key.
 # Install with dev dependencies
 uv sync --extra dev
 
-# Run tests (88 passing)
+# Run tests (108 passing)
 uv run pytest tests/ -v
 
 # Code quality
