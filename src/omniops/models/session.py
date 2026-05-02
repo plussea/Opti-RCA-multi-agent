@@ -48,6 +48,9 @@ class AlarmRecord(BaseModel):
     shelf: Optional[str] = Field(None, description="机架")
     slot: Optional[str] = Field(None, description="槽位")
     board_type: Optional[str] = Field(None, description="板卡类型")
+    # 光网络扩展字段
+    topology_id: Optional[str] = Field(None, description="所属拓扑 ID，如 Topology_mesh10_1")
+    location: Optional[str] = Field(None, description="设备定位信息，如 2-subrack-4-K1OB1-3(OUT13/OUT14)-ODU4:1")
     raw_data: Dict[str, Any] = Field(default_factory=dict, description="原始数据")
 
 

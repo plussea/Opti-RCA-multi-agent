@@ -6,7 +6,9 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from omniops.api.routes import router
+from omniops.api.routes.sessions import router as sessions_router
+from omniops.api.routes.health import router as health_router
+from omniops.api.routes.knowledge import router as knowledge_router
 from omniops.core.config import get_settings
 from omniops.core.database import close_db, init_db
 from omniops.memory.redis_store import get_redis_session_store
@@ -138,8 +140,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 注册路由
-    app.include_router(router)
+    app.include_router(health_router)
+    app.include_router(sessions_router)
+    app.include_router(knowledge_router)
 
     return app
 

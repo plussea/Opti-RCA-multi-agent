@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 src/omniops/__init__.py
@@ -31,6 +32,7 @@ src/omniops/core/encoding.py
 src/omniops/core/file_storage.py
 src/omniops/core/llm_client.py
 src/omniops/core/tool_registry.py
+src/omniops/core/topology_manager.py
 src/omniops/core/providers/__init__.py
 src/omniops/core/providers/base.py
 src/omniops/core/providers/minimax_provider.py
@@ -41,8 +43,14 @@ src/omniops/events/publisher.py
 src/omniops/events/schemas.py
 src/omniops/ingestion/__init__.py
 src/omniops/ingestion/csv_parser.py
+src/omniops/knowledge/__init__.py
+src/omniops/knowledge/entity_parser.py
+src/omniops/knowledge/graph_builder.py
+src/omniops/knowledge/kg_query.py
+src/omniops/knowledge/neo4j_client.py
 src/omniops/memory/__init__.py
 src/omniops/memory/db_store.py
+src/omniops/memory/persistence.py
 src/omniops/memory/redis_store.py
 src/omniops/memory/store.py
 src/omniops/models/__init__.py

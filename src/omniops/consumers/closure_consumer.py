@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 
 from omniops.events.schemas import KnowledgeClosureRequestedEvent
+from omniops.memory.persistence import SessionPersistence
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.models import SessionStatus
 from omniops.mq import BaseConsumer
@@ -52,6 +53,11 @@ class ClosureConsumer(BaseConsumer):
 
             # 更新 session 为终态
             await store.update(
+                session_id,
+                status=SessionStatus.RESOLVED,
+                current_step="resolved",
+            )
+            SessionPersistence.dual_write(
                 session_id,
                 status=SessionStatus.RESOLVED,
                 current_step="resolved",

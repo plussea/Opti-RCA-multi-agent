@@ -19,6 +19,7 @@ loguru>=0.7.0
 pyyaml>=6.0.0
 python-dotenv>=1.0.1
 aio-pika>=9.0.0
+neo4j>=5.0.0
 
 [dev]
 pytest>=7.4.0
@@ -30,6 +31,7 @@ mypy>=1.7.0
 pre-commit>=3.5.0
 types-python-dateutil
 types-redis
+types-PyYAML
 
 [ocr]
 paddlepaddle>=2.5.0

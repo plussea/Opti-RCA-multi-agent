@@ -73,6 +73,23 @@ class Settings(BaseSettings):
     qdrant_collection: str = Field(default="omniops_knowledge")
 
     # ===================
+    # OCR 配置
+    # ===================
+    ocr_api_key: str = Field(default="", validation_alias="OCR_API_KEY")
+    ocr_model: str = Field(default="baidu/qianfan-ocr-fast:free", validation_alias="OCR_MODEL")
+    ocr_confidence_threshold: float = Field(default=0.85)
+
+    # ===================
+    # Embedding 配置
+    # ===================
+    embedding_api_key: str = Field(default="", validation_alias="EMBEDDING_API_KEY")
+    embedding_model: str = Field(
+        default="nvidia/llama-nemotron-embed-vl-1b-v2:free",
+        validation_alias="EMBEDDING_MODEL",
+    )
+    embedding_dim: int = Field(default=1536)
+
+    # ===================
     # Neo4j 配置
     # ===================
     neo4j_uri: str = Field(default="bolt://localhost:7687")
@@ -98,9 +115,6 @@ class Settings(BaseSettings):
     single_agent_threshold: int = Field(default=5)
     batch_agent_threshold: int = Field(default=5)
     confidence_conflict_threshold: float = Field(default=0.2)
-
-    # OCR 置信度阈值
-    ocr_confidence_threshold: float = Field(default=0.85)
 
     # CSV 编码回退
     csv_encoding_fallback: List[str] = Field(

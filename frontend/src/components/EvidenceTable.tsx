@@ -35,22 +35,20 @@ const columns: ColumnDef<AlarmRecord>[] = [
     accessorKey: "severity",
     header: "级别",
     cell: ({ row }) => {
-      const sev = row.getValue("severity") as string | undefined;
-      if (!sev) return "—";
+      const sev = (row.getValue("severity") as string | undefined) ?? "";
+      const upper = sev.toUpperCase();
       return (
         <Badge
           variant={
-            sev === "Critical"
+            upper === "CRITICAL" || upper === "MAJOR"
               ? "destructive"
-              : sev === "Major"
-              ? "destructive"
-              : sev === "Warning"
+              : upper === "WARNING"
               ? "pending_human"
               : "secondary"
           }
           className="text-[10px]"
         >
-          {sev}
+          {sev || "—"}
         </Badge>
       );
     },

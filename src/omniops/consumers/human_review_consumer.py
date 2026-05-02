@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Any
 
 from omniops.events.schemas import HumanFeedbackReceivedEvent, HumanReviewRequiredEvent
+from omniops.memory.db_store import get_db_session_store
+from omniops.memory.persistence import SessionPersistence
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.models import SessionStatus
 from omniops.mq import BaseConsumer
@@ -51,6 +53,13 @@ class HumanReviewConsumer(BaseConsumer):
             current_step="pending_human",
         )
 
+        # 持久化
+        SessionPersistence.dual_write(
+            session_id,
+            status=SessionStatus.PENDING_HUMAN,
+            current_step="pending_human",
+        )
+
         # 启动超时任务
         async def timeout_watcher(sid: str, secs: int) -> None:
             await asyncio.sleep(secs)
@@ -92,6 +101,24 @@ class HumanReviewConsumer(BaseConsumer):
                 current_step="resolving",
                 human_feedback=session.human_feedback,
             )
+            SessionPersistence.dual_write(
+                session_id,
+                status=status,
+                current_step="resolving",
+                human_feedback=session.human_feedback,
+            )
+
+            # 写反馈记录
+            try:
+                db_store = await get_db_session_store()
+                await db_store.save_feedback(
+                    session_id=session_id,
+                    decision=event.decision,
+                    actual_action=event.actual_action or "",
+                    effectiveness=event.effectiveness or "",
+                )
+            except Exception as e:
+                logger.warning(f"Feedback persist failed (non-fatal): {e}")
 
         # 发布知识闭环事件
         from omniops.events.publisher import get_publisher
@@ -119,6 +146,11 @@ class HumanReviewConsumer(BaseConsumer):
         try:
             store = await get_redis_session_store()
             await store.update(
+                session_id,
+                status=SessionStatus.ESCALATED,
+                current_step="escalated",
+            )
+            SessionPersistence.dual_write(
                 session_id,
                 status=SessionStatus.ESCALATED,
                 current_step="escalated",

@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from omniops.agents.base import BaseAgent
-from omniops.core.llm_client import (
+from omniops.core.prompts import (
     PLANNING_SYSTEM_PROMPT,
     PLANNING_USER_TEMPLATE,
 )
@@ -125,6 +125,11 @@ class PlanningAgent(BaseAgent):
     ) -> Suggestion:
         """匹配方案模板"""
         templates = {
+            "数据库": [
+                SuggestionAction(step=1, action="检查数据库进程状态和连接数", estimated_time="10min", service_impact="none"),
+                SuggestionAction(step=2, action="查看数据库错误日志，定位故障原因", estimated_time="15min", service_impact="none"),
+                SuggestionAction(step=3, action="如为配置类告警，执行配置恢复或同步", estimated_time="20min", service_impact="requires_planned"),
+            ],
             "光链路": [
                 SuggestionAction(step=1, action="检查光纤端面清洁度", estimated_time="10min", service_impact="none"),
                 SuggestionAction(step=2, action="使用 OTDR 测试光纤长度和损耗", estimated_time="15min", service_impact="none"),
@@ -176,6 +181,7 @@ class PlanningAgent(BaseAgent):
     def _get_tools_for_keyword(self, keyword: str) -> List[str]:
         """根据根因关键词获取所需工具"""
         tools_map = {
+            "数据库": ["数据库客户端", "日志分析工具", "备份恢复工具"],
             "光链路": ["OTDR", "光纤清洁棒", "备用光纤"],
             "光功率": ["光功率计", "备用光模块", "光纤清洁棒"],
             "电源": ["万用表", "备用电源模块", "UPS 状态查询"],

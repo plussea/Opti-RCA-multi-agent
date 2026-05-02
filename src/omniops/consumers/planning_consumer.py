@@ -1,8 +1,11 @@
 """方案 Agent Consumer"""
 import logging
+import time
+from typing import Optional
 
 from omniops.agents import ImpactAgent, PlanningAgent
 from omniops.events.schemas import PlanningRequestedEvent
+from omniops.memory.persistence import SessionPersistence
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.models import SessionStatus
 from omniops.mq import BaseConsumer
@@ -29,38 +32,47 @@ class PlanningConsumer(BaseConsumer):
             logger.warning(f"Lock unavailable for {session_id}")
             return
 
+        t0 = time.monotonic()
+        error_msg: Optional[str] = None
+
         try:
             # 先执行 impact（如尚未执行）
             if not session.impact:
                 impact_agent = ImpactAgent()
                 await impact_agent.process(session)
-                await store.update(session_id, impact=session.impact)
+                SessionPersistence.dual_write(session_id, impact=session.impact)
 
             # 执行规划
             session.status = SessionStatus.PLANNING
             session.current_step = "planning"
-            await store.update(session_id, status=session.status, current_step=session.current_step)
+            SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
 
             plan_agent = PlanningAgent()
-            await plan_agent.process(session)
+            plan_out = await plan_agent.process(session)
 
-            await store.update(
+            SessionPersistence.dual_write(
                 session_id,
                 status=session.status,
                 current_step=session.current_step,
                 suggestion=session.suggestion,
             )
 
-            # 发布校验事件
+            SessionPersistence.save_conversation(
+                session_id=session_id,
+                agent_name="planning",
+                step_order=1,
+                cognitive_summary=plan_out.model_dump() if plan_out else None,
+                duration_ms=int((time.monotonic() - t0) * 1000),
+            )
+
             from omniops.events.publisher import get_publisher
             publisher = await get_publisher()
 
-            # 路由决定下一步
             suggestion = session.suggestion
             if suggestion and suggestion.needs_approval:
                 session.current_step = "pending_human"
                 session.status = SessionStatus.PENDING_HUMAN
-                await store.update(session_id, status=session.status, current_step=session.current_step)
+                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_human_review_required(
                     session_id=session_id,
                     timeout_seconds=600,
@@ -72,10 +84,21 @@ class PlanningConsumer(BaseConsumer):
             else:
                 session.current_step = "verifying"
                 session.status = SessionStatus.VERIFYING
-                await store.update(session_id, status=session.status, current_step=session.current_step)
+                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_verification_requested(session)
 
             logger.info(f"[PlanningConsumer] completed session={session_id}")
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"[PlanningConsumer] failed: {e}")
+            SessionPersistence.save_conversation(
+                session_id=session_id,
+                agent_name="planning",
+                step_order=1,
+                error_message=error_msg,
+                duration_ms=int((time.monotonic() - t0) * 1000),
+            )
 
         finally:
             await store.release_lock(session_id)

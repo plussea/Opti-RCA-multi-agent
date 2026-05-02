@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select, update
+from sqlalchemy.orm import joinedload
 
 from omniops.core.database import async_session_maker, init_db
 from omniops.models import Session, SessionStatus
@@ -41,6 +42,8 @@ class DBSessionStore:
                 shelf=r.shelf,
                 slot=r.slot,
                 board_type=r.board_type,
+                topology_id=r.topology_id,
+                location=r.location,
                 raw_data=r.raw_data or {},
             )
             records.append(alarm_record)
@@ -105,6 +108,8 @@ class DBSessionStore:
                 "shelf": r.shelf,
                 "slot": r.slot,
                 "board_type": r.board_type,
+                "topology_id": r.topology_id,
+                "location": r.location,
                 "raw_data": r.raw_data,
             })
 
@@ -153,10 +158,16 @@ class DBSessionStore:
         }
 
     async def create(self, session: Session) -> Session:
-        """创建新会话"""
+        """创建新会话（幂等：删除已存在记录后重新插入）"""
         await self.ensure_init()
 
         async with async_session_maker() as db:
+            # 先删除已存在的记录（幂等支持，允许重复运行测试）
+            delete_stmt = SessionModel.__table__.delete().where(
+                SessionModel.session_id == session.session_id
+            )
+            await db.execute(delete_stmt)
+
             # 创建会话记录
             session_data = await self._to_model(session)
 
@@ -176,6 +187,8 @@ class DBSessionStore:
                     shelf=r.shelf,
                     slot=r.slot,
                     board_type=r.board_type,
+                    topology_id=r.topology_id,
+                    location=r.location,
                     raw_data=r.raw_data or {},
                 )
                 db.add(alarm)
@@ -191,25 +204,14 @@ class DBSessionStore:
         async with async_session_maker() as db:
             stmt = (
                 select(SessionModel)
-                .options()  # 加载关联
+                .options(joinedload(SessionModel.alarm_records))
                 .where(SessionModel.session_id == session_id)
             )
             result = await db.execute(stmt)
-            model = result.scalar_one_or_none()
+            model = result.unique().scalar_one_or_none()
 
             if not model:
                 return None
-
-            # 重新加载告警记录
-            from sqlalchemy import select as sa_select
-
-            from omniops.models.database import AlarmRecordModel
-
-            alarm_stmt = sa_select(AlarmRecordModel).where(
-                AlarmRecordModel.session_id == session_id
-            )
-            alarm_result = await db.execute(alarm_stmt)
-            model.alarm_records = alarm_result.scalars().all()
 
             return await self._to_session(model)
 
@@ -218,7 +220,6 @@ class DBSessionStore:
         await self.ensure_init()
 
         async with async_session_maker() as db:
-            # 构建更新数据
             update_data = {}
             if "status" in updates:
                 status = updates["status"]
@@ -250,6 +251,9 @@ class DBSessionStore:
                 update_data["human_feedback"] = updates["human_feedback"]
             if "perception_metadata" in updates:
                 update_data["perception_metadata"] = updates["perception_metadata"]
+            # current_step 是内存状态，不持久化
+            if "current_step" in update_data:
+                del update_data["current_step"]
 
             update_data["updated_at"] = datetime.utcnow()
 
@@ -280,24 +284,78 @@ class DBSessionStore:
         """列出所有活跃会话"""
         await self.ensure_init()
 
+        active = {"analyzing", "perceived", "diagnosing", "planning", "verifying", "pending_human", "needs_review"}
         async with async_session_maker() as db:
-            stmt = select(SessionModel).where(
-                SessionModel.status.in_(["analyzing", "needs_review"])
-            )
+            stmt = select(SessionModel).options(joinedload(SessionModel.alarm_records)).where(SessionModel.status.in_(active))
             result = await db.execute(stmt)
-            models = result.scalars().all()
+            models = result.unique().scalars().all()
 
             sessions = []
             for model in models:
-                # 加载告警记录
-                alarm_stmt = select(AlarmRecordModel).where(
-                    AlarmRecordModel.session_id == model.session_id
-                )
-                alarm_result = await db.execute(alarm_stmt)
-                model.alarm_records = alarm_result.scalars().all()
                 sessions.append(await self._to_session(model))
 
             return sessions
+
+    async def save_conversation(
+        self,
+        session_id: str,
+        agent_name: str,
+        step_order: int,
+        llm_input: Optional[Dict[str, Any]] = None,
+        llm_output: Optional[Dict[str, Any]] = None,
+        cognitive_summary: Optional[Dict[str, Any]] = None,
+        tokens_used: Optional[int] = None,
+        model_name: Optional[str] = None,
+        duration_ms: Optional[int] = None,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """保存 Agent 对话记录"""
+        await self.ensure_init()
+        from omniops.models.database import AgentConversationModel
+        async with async_session_maker() as db:
+            conv = AgentConversationModel(
+                session_id=session_id,
+                agent_name=agent_name,
+                step_order=step_order,
+                llm_input=llm_input,
+                llm_output=llm_output,
+                cognitive_summary=cognitive_summary,
+                tokens_used=tokens_used,
+                model_name=model_name,
+                duration_ms=duration_ms,
+                error_message=error_message,
+            )
+            db.add(conv)
+            await db.commit()
+
+    async def get_conversations(self, session_id: str) -> List[Dict[str, Any]]:
+        """获取会话的所有 Agent 对话记录"""
+        await self.ensure_init()
+        from omniops.models.database import AgentConversationModel
+        async with async_session_maker() as db:
+            stmt = (
+                select(AgentConversationModel)
+                .where(AgentConversationModel.session_id == session_id)
+                .order_by(AgentConversationModel.step_order)
+            )
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
+            return [
+                {
+                    "id": r.id,
+                    "agent_name": r.agent_name,
+                    "step_order": r.step_order,
+                    "llm_input": r.llm_input,
+                    "llm_output": r.llm_output,
+                    "cognitive_summary": r.cognitive_summary,
+                    "tokens_used": r.tokens_used,
+                    "model_name": r.model_name,
+                    "duration_ms": r.duration_ms,
+                    "error_message": r.error_message,
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                }
+                for r in rows
+            ]
 
     async def save_feedback(
         self,
@@ -308,10 +366,9 @@ class DBSessionStore:
     ) -> bool:
         """保存反馈记录"""
         await self.ensure_init()
+        from omniops.models.database import FeedbackModel
 
         async with async_session_maker() as db:
-            from omniops.models.database import FeedbackModel
-
             feedback = FeedbackModel(
                 session_id=session_id,
                 decision=decision,

@@ -34,7 +34,7 @@ class TestDiagnosisAgent:
     @pytest.mark.asyncio
     async def test_rule_based_diagnosis_link_fail(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="LINK_FAIL", alarm_name="链路故障"),
+            AlarmRecord(ne_name="NE-01", alarm_code="OTS_LOS", alarm_name="光发送段信号丢失"),
         ]
         session = Session(
             session_id=generate_session_id(),
@@ -46,14 +46,14 @@ class TestDiagnosisAgent:
         agent = DiagnosisAgent()
         summary = await agent.process(session)
 
-        assert "光链路" in summary.conclusion or "光" in summary.conclusion
+        assert "光" in summary.conclusion
         assert summary.confidence >= 0.6
         assert session.diagnosis_result is not None
 
     @pytest.mark.asyncio
     async def test_rule_based_diagnosis_power_low(self):
         records = [
-            AlarmRecord(ne_name="NE-01", alarm_code="POWER_LOW"),
+            AlarmRecord(ne_name="NE-01", alarm_code="LSR_WILL_DIE"),
         ]
         session = Session(
             session_id=generate_session_id(),
@@ -65,7 +65,7 @@ class TestDiagnosisAgent:
         agent = DiagnosisAgent()
         summary = await agent.process(session)
 
-        assert "电源" in summary.conclusion or "供电" in summary.conclusion
+        assert "光模块" in summary.conclusion
         assert summary.confidence >= 0.6
 
 

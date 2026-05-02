@@ -6,9 +6,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useSessionStore } from "~/store/sessionStore";
 import { AuditCard } from "./AuditCard";
 import { EvidenceTable } from "./EvidenceTable";
+import { KnowledgeGraph } from "~/components/KnowledgeGraph";
 import type { Session } from "~/lib/types";
 
 function DiagnosisPanel({ session }: { session: Session }) {
@@ -17,58 +19,73 @@ function DiagnosisPanel({ session }: { session: Session }) {
     return <p className="text-zinc-500 text-sm p-4">等待诊断结果…</p>;
   }
   return (
-    <div className="space-y-4 p-4">
-      <div>
-        <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">根因结论</div>
-        <div className="text-base font-semibold text-zinc-100">{d.root_cause}</div>
-      </div>
-      <div className="flex items-center gap-4">
-        <div>
-          <div className="text-xs text-zinc-500">置信度</div>
-          <div className="text-lg font-bold font-mono text-green-400">
-            {(d.confidence * 100).toFixed(0)}%
-          </div>
-        </div>
-        {d.uncertainty && (
+    <Tabs defaultValue="evidence" className="w-full">
+      <TabsList>
+        <TabsTrigger value="evidence">诊断证据</TabsTrigger>
+        <TabsTrigger value="knowledge">知识图谱</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="evidence">
+        <div className="space-y-4 p-4">
           <div>
-            <div className="text-xs text-zinc-500">不确定性</div>
-            <div className="text-sm text-orange-400">{d.uncertainty}</div>
+            <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">根因结论</div>
+            <div className="text-base font-semibold text-zinc-100">{d.root_cause}</div>
           </div>
-        )}
-      </div>
-      {d.evidence.length > 0 && (
-        <div>
-          <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">证据链</div>
-          <div className="space-y-2">
-            {d.evidence.map((e, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-zinc-600 mt-0.5">›</span>
-                <div>
-                  <span className="text-zinc-300">{e.source}</span>
-                  {e.code && <span className="text-zinc-500 ml-1 font-mono text-xs">{e.code}</span>}
-                  {e.value && <span className="text-zinc-400 ml-1">{e.value}</span>}
-                </div>
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="text-xs text-zinc-500">置信度</div>
+              <div className="text-lg font-bold font-mono text-green-400">
+                {(d.confidence * 100).toFixed(0)}%
               </div>
-            ))}
+            </div>
+            {d.uncertainty && (
+              <div>
+                <div className="text-xs text-zinc-500">不确定性</div>
+                <div className="text-sm text-orange-400">{d.uncertainty}</div>
+              </div>
+            )}
           </div>
+          {d.evidence.length > 0 && (
+            <div>
+              <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">证据链</div>
+              <div className="space-y-2">
+                {d.evidence.map((e, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <span className="text-zinc-600 mt-0.5">›</span>
+                    <div>
+                      <span className="text-zinc-300">{e.source}</span>
+                      {e.code && <span className="text-zinc-500 ml-1 font-mono text-xs">{e.code}</span>}
+                      {e.value && <span className="text-zinc-400 ml-1">{e.value}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {d.agent_chain.length > 0 && (
+            <div>
+              <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">调用链</div>
+              <div className="flex flex-wrap gap-1">
+                {d.agent_chain.map((agent) => (
+                  <span
+                    key={agent}
+                    className="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-400 rounded font-mono"
+                  >
+                    {agent}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-      {d.agent_chain.length > 0 && (
-        <div>
-          <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">调用链</div>
-          <div className="flex flex-wrap gap-1">
-            {d.agent_chain.map((agent) => (
-              <span
-                key={agent}
-                className="px-2 py-0.5 text-xs bg-zinc-800 text-zinc-400 rounded font-mono"
-              >
-                {agent}
-              </span>
-            ))}
-          </div>
+      </TabsContent>
+
+      <TabsContent value="knowledge">
+        <div className="p-4">
+          <KnowledgeGraph alarmRecords={session.structured_data} height={320} />
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 

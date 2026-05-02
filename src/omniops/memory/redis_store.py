@@ -70,6 +70,8 @@ class RedisSessionStore:
                     "shelf": r.shelf,
                     "slot": r.slot,
                     "board_type": r.board_type,
+                    "topology_id": r.topology_id,
+                    "location": r.location,
                     "raw_data": r.raw_data,
                 }
                 for r in session.structured_data
@@ -129,6 +131,8 @@ class RedisSessionStore:
                 shelf=r.get("shelf"),
                 slot=r.get("slot"),
                 board_type=r.get("board_type"),
+                topology_id=r.get("topology_id"),
+                location=r.get("location"),
                 raw_data=r.get("raw_data", {}),
             ))
 

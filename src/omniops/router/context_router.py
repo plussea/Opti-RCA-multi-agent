@@ -57,7 +57,7 @@ class ContextRouter:
         if mode == AgentMode.SINGLE:
             return ["perception", "diagnosis"]
         elif mode == AgentMode.MULTI:
-            return ["perception", "diagnosis", "impact", "planning"]
+            return ["perception", "diagnosis", "impact", "planning", "verification"]
         elif mode == AgentMode.HUMAN_IN_LOOP:
             return ["perception", "diagnosis", "impact", "planning", "verification", "approval"]
         return ["perception", "diagnosis"]

@@ -1,9 +1,9 @@
-"""诊断 Agent（LLM 增强版）"""
+"""诊断 Agent（LLM 增强版 + 知识图谱感知）"""
 import logging
 from typing import Any, Dict, List, Optional
 
 from omniops.agents.base import BaseAgent
-from omniops.core.llm_client import (
+from omniops.core.prompts import (
     DIAGNOSIS_SYSTEM_PROMPT,
     DIAGNOSIS_USER_TEMPLATE,
     get_alarm_dict_text,
@@ -46,6 +46,27 @@ class DiagnosisAgent(BaseAgent):
             except Exception as e:
                 logger.warning(f"RAG search failed: {e}")
 
+        # 知识图谱查询（诊断 Agent 专用，<500ms 目标）
+        kg_context: Dict[str, Any] = {"subgraph_paths": [], "community_summaries": [], "rules": []}
+        try:
+            from omniops.knowledge.neo4j_client import get_neo4j_client
+            client = get_neo4j_client()
+            kg_result = await client.query_session(
+                structured_data=records,
+                hops=2,
+                top_k=5,
+            )
+            kg_context = {
+                "subgraph_paths": kg_result.get("subgraph_paths", []),
+                "community_summaries": kg_result.get("community_summaries", []),
+                "rules": kg_result.get("rules", []),
+            }
+            logger.info(f"[Diagnosis] KG query done, latency={kg_result.get('query_latency_ms', 0)}ms, "
+                        f"paths={len(kg_context['subgraph_paths'])}, "
+                        f"communities={len(kg_context['community_summaries'])}")
+        except Exception as e:
+            logger.warning(f"[Diagnosis] KG query failed, falling back to pure RAG: {e}")
+
         # 尝试规则匹配
         root_cause, confidence, evidence = self._rule_based_diagnosis(records, alarm_codes)
 
@@ -57,6 +78,7 @@ class DiagnosisAgent(BaseAgent):
                 llm_result = await self._llm_diagnosis(
                     records=records,
                     similar_cases=similar_cases,
+                    kg_context=kg_context,
                 )
                 # 融合 LLM 结果和规则结果
                 if llm_result and llm_result.get("confidence", 0) > confidence:
@@ -96,8 +118,9 @@ class DiagnosisAgent(BaseAgent):
         self,
         records: List[Any],
         similar_cases: List[Dict[str, Any]],
+        kg_context: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """使用 LLM 进行诊断"""
+        """使用 LLM 进行诊断（注入图谱知识）"""
         try:
             # 构建告警表文本
             alarms_text = "\n".join([
@@ -114,10 +137,28 @@ class DiagnosisAgent(BaseAgent):
                 for c in similar_cases[:3]
             ]) if similar_cases else "无相似案例"
 
+            # 构建图谱知识文本
+            kg_text = ""
+            if kg_context:
+                paths = kg_context.get("subgraph_paths", [])
+                communities = kg_context.get("community_summaries", [])
+                rules = kg_context.get("rules", [])
+                if paths:
+                    kg_text += f"\n【图谱关联路径】\n" + "\n".join(f"  • {p}" for p in paths[:5])
+                if communities:
+                    kg_text += f"\n【相关社区】\n"
+                    for c in communities[:3]:
+                        kg_text += f"  • {c.get('name','?')}: {c.get('summary','')[:80]}\n"
+                if rules:
+                    kg_text += f"\n【适用规则】\n"
+                    for r in rules[:3]:
+                        kg_text += f"  • {r.get('name','?')}: {r.get('content','')[:80]}\n"
+
             user_message = DIAGNOSIS_USER_TEMPLATE.format(
                 alarms=alarms_text,
                 similar_cases=cases_text,
                 alarm_dict=get_alarm_dict_text(),
+                kg_context=kg_text or "（图谱暂无可用知识）",
             )
 
             from omniops.core.providers import get_provider
@@ -138,38 +179,87 @@ class DiagnosisAgent(BaseAgent):
         records: List[Any],
         alarm_codes: List[str],
     ) -> tuple:
-        """基于规则的简单诊断逻辑"""
-        # 已知告警模式映射
-        patterns = {
-            ("LINK_FAIL",): ("光链路故障", 0.85),
-            ("POWER_LOW",): ("电源故障或供电不足", 0.80),
-            ("BER_HIGH",): ("光功率劣化导致误码", 0.82),
-            ("OTU_LOF",): ("光通道帧丢失，可能光纤劣化", 0.88),
-            ("LOS",): ("光信号丢失", 0.90),
-            ("BD_STATUS",): ("板卡状态异常", 0.75),
-        }
+        """基于规则的诊断逻辑 — 支持光网络告警码和告警名称"""
+        alarm_names: List[str] = []
+        for r in records:
+            if r.alarm_name:
+                alarm_names.append(r.alarm_name)
 
-        # 匹配模式
-        for codes, (cause, conf) in patterns.items():
-            if all(c in alarm_codes for c in codes):
-                evidence = [
-                    Evidence(type="alarm", source=r.ne_name, code=c)
-                    for c in codes
-                    for r in records
-                    if r.alarm_code == c
-                ]
+        all_codes = set(alarm_codes)
+        all_names = set(alarm_names)
+
+        # 光网络告警模式（优先级从高到低）
+        patterns = [
+            # ---- 光链路中断类 ----
+            ({"OTS_LOS", "OMS_LOS_P", "OCH_LOS_P"}, 0.92, "光链路信号丢失（OTS/OMS/OCH LOS）", "link_los"),
+            ({"OCH_LOS_P"}, 0.90, "光通道信号丢失（OCH_LOS_P）", "och_los"),
+            ({"OTS_LOS"}, 0.91, "光发送段信号丢失（OTS_LOS）", "ots_los"),
+            ({"OMS_LOS_P"}, 0.89, "光复用段信号丢失（OMS_LOS_P）", "oms_los"),
+            # ---- 以太网/数据平面故障 ----
+            ({"ETHOAM_SELF_LOOP"}, 0.88, "以太网 OAM 自环（ETHOAM_SELF_LOOP）", "eth_loop"),
+            ({"PORT_EXC_TRAFFIC", "STORM_CUR_QUENUM_OVER", "FLOW_OVER"}, 0.87, "端口流量异常或广播风暴", "traffic"),
+            ({"STORM_CUR_QUENUM_OVER"}, 0.86, "广播风暴（STORM_CUR_QUENUM_OVER）", "storm"),
+            ({"FLOW_OVER"}, 0.85, "流量溢出（FLOW_OVER）", "flow"),
+            # ---- 光模块/硬件故障 ----
+            ({"LSR_WILL_DIE"}, 0.85, "光模块即将失效（LSR_WILL_DIE）", "module"),
+            ({"LASER_MODULE_MISMATCH"}, 0.84, "光模块型号不匹配", "module_mismatch"),
+            # ---- 数据库/配置类 ----
+            ({"DBMS_ERROR"}, 0.82, "数据库故障（DBMS_ERROR）", "db"),
+            ({"DB_MEM_DIFF"}, 0.78, "数据库内存状态不一致（DB_MEM_DIFF）", "db"),
+            ({"CFG_DATASAVE_FAIL"}, 0.76, "配置保存失败（CFG_DATASAVE_FAIL）", "config"),
+            # ---- 告警名称匹配（备用） ----
+            (set(), 0.83, "光链路信号丢失", "och_los_fallback", {"OCH_LOS_P"}),
+            (set(), 0.82, "光模块老化或故障", "module_fallback", {"LSR_WILL_DIE"}),
+            (set(), 0.87, "以太网 OAM 自环故障", "eth_loop_fallback", {"ETHOAM_SELF_LOOP"}),
+            (set(), 0.86, "端口流量异常", "traffic_fallback", {"PORT_EXC_TRAFFIC"}),
+            (set(), 0.83, "广播风暴", "storm_fallback", {"STORM_CUR_QUENUM_OVER"}),
+            (set(), 0.88, "光链路断路故障", "los_fallback", {"OTS_LOS"}),
+        ]
+
+        for pattern in patterns:
+            codes_to_match = pattern[0]
+            conf = pattern[1]
+            cause = pattern[2]
+            fallback_names = pattern[4] if len(pattern) > 4 else set()
+
+            matched = False
+            if codes_to_match:
+                # 非空码集合：要求所有码都出现在告警码中
+                matched = codes_to_match.issubset(all_codes)
+            elif fallback_names:
+                # 空码集合 + 告警名称回退：当告警码全为空时才按名称匹配
+                matched = not all_codes and fallback_names.issubset(all_names)
+
+            if matched:
+                evidence = []
+                for r in records:
+                    if r.alarm_code and r.alarm_code in codes_to_match:
+                        evidence.append(Evidence(type="alarm", source=r.ne_name, code=r.alarm_code))
+                    elif r.alarm_name and fallback_names and r.alarm_name in fallback_names:
+                        evidence.append(Evidence(type="alarm", source=r.ne_name, code=r.alarm_name))
                 return cause, conf, evidence
 
         # 默认诊断
-        top_alarm = max(
-            set(alarm_codes), key=lambda x: alarm_codes.count(x), default="unknown"
-        )
+        top_code = max(set(alarm_codes), key=lambda x: alarm_codes.count(x), default=None)
+        if not top_code and alarm_names:
+            top_name = max(alarm_names, key=lambda x: alarm_names.count(x))
+            return (
+                f"初步判定：{top_name} 告警为主，需进一步分析",
+                0.60,
+                [
+                    Evidence(type="alarm", source=r.ne_name, code=r.alarm_name)
+                    for r in records[:3]
+                    if r.alarm_name == top_name
+                ],
+            )
+
         return (
-            f"初步判定：{top_alarm} 告警为主，需进一步分析",
+            f"初步判定：{top_code or '未知'} 告警为主，需进一步分析",
             0.60,
             [
-                Evidence(type="alarm", source=r.ne_name, code=top_alarm)
+                Evidence(type="alarm", source=r.ne_name, code=top_code)
                 for r in records[:3]
+                if r.alarm_code == top_code
             ],
         )
 

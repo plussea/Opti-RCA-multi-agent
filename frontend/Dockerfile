@@ -1,23 +1,29 @@
-# Single-stage: runs the pre-built Next.js standalone.
-# Node.js is installed from NodeSource (no external image dependency).
-FROM python:3.9-slim
+# ── Stage 1: Build ────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install Node.js 20 from NodeSource + wget (used by docker healthcheck)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl wget \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install deps (includes lockfile cache)
+COPY package.json package-lock.json* ./
+RUN npm ci --prefer-offline
 
-# Copy pre-built Next.js standalone output
-COPY .next/standalone ./
-COPY .next/static ./.next/static
+# Copy source and build
+COPY . .
+RUN npm run build
 
-EXPOSE 3000
+# ── Stage 2: Runtime ───────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NODE_ENV=production
+
+# Copy standalone output + static assets
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
 
 CMD ["node", "server.js"]

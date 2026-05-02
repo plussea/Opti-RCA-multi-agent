@@ -133,3 +133,99 @@ export const PIPELINE_NODES: { step: PipelineStep; label: string; icon: string }
   { step: "verifying", label: "Verification", icon: "✓" },
   { step: "pending_human", label: "Human Review", icon: "👤" },
 ];
+
+// ── Knowledge Graph types ──────────────────────────────────────────────────────
+
+export interface KGNode {
+  id: string;
+  label: string;
+  type: "Alarm" | "Fault" | "Device" | "Topology" | "Rule" | "Community";
+  props: Record<string, unknown>;
+}
+
+export interface KGEdge {
+  source: string;
+  target: string;
+  relation: string;
+  props?: Record<string, unknown>;
+}
+
+export interface SubgraphPath {
+  path: string[];
+  relations: string[];
+  description: string;
+}
+
+export interface CommunitySummary {
+  id: string;
+  name: string;
+  summary: string;
+  member_count: number;
+  entities: string[];
+}
+
+export interface KGRule {
+  id: string;
+  name: string;
+  content: string;
+  applicable_alarms: string[];
+}
+
+export interface KGQueryResult {
+  subgraph_paths: SubgraphPath[];
+  community_summaries: CommunitySummary[];
+  rules: KGRule[];
+  query_latency_ms: number;
+  seed_entities: string[];
+  subgraph_stats: { nodes: number; edges: number };
+  fallback?: string;
+}
+
+export interface KGGraphData {
+  nodes: KGNode[];
+  edges: KGEdge[];
+}
+
+export interface KGGraphStats {
+  node_count: number;
+  edge_count: number;
+  community_count: number;
+  alarm_count: number;
+  fault_count: number;
+  device_count: number;
+}
+
+export interface KGVisualizationElement {
+  data: {
+    id: string;
+    label?: string;
+    nodeType?: KGNode["type"];
+    color?: string;
+    size?: number;
+    source?: string;
+    target?: string;
+  };
+}
+
+export interface KGVisualizationResponse {
+  elements: {
+    nodes: KGVisualizationElement[];
+    edges: KGVisualizationElement[];
+  };
+  layout?: string;
+  stats?: KGGraphStats;
+}
+
+export interface GraphBuildStatus {
+  build_id: string;
+  status: "building" | "completed" | "failed";
+  stats: {
+    nodes_created: number;
+    relations_created: number;
+    communities_found: number;
+    parse_errors: number;
+  };
+  started_at: string;
+  completed_at?: string;
+  error?: string;
+}

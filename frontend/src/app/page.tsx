@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useSSE } from "~/hooks/useSSE";
 import { useSessionStore } from "~/store/sessionStore";
 import { SessionList } from "~/components/SessionList";
 import { AgentPipeline } from "~/components/AgentPipeline";
 import { DetailDrawer } from "~/components/DetailDrawer";
 import { UploadZone } from "~/components/UploadZone";
+import { Network } from "lucide-react";
 
 function AppContent() {
   const { activeSessionId, activeSession } = useSessionStore();
@@ -29,12 +31,22 @@ function AppContent() {
       <main className="flex-1 flex flex-col min-w-0 border-r border-zinc-800">
         <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
           <h2 className="text-sm font-medium text-zinc-300">Agent Pipeline</h2>
-          {activeSession && (
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-zinc-600">{activeSession.session_id}</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {activeSession && (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs text-zinc-600">{activeSession.session_id}</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              </div>
+            )}
+            <Link
+              href="/dashboard/knowledge"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-100 border border-zinc-800 rounded hover:border-zinc-700 hover:bg-zinc-800/50 transition-all"
+              title="知识图谱管理"
+            >
+              <Network className="h-3.5 w-3.5" />
+              知识图谱
+            </Link>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto grid-bg">
           <AgentPipeline />

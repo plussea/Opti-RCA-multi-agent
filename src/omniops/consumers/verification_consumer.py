@@ -1,8 +1,11 @@
 """校验 Agent Consumer"""
 import logging
+import time
+from typing import Optional
 
 from omniops.agents import VerificationAgent
 from omniops.events.schemas import VerificationRequestedEvent
+from omniops.memory.persistence import SessionPersistence
 from omniops.memory.redis_store import get_redis_session_store
 from omniops.models import SessionStatus
 from omniops.mq import BaseConsumer
@@ -28,28 +31,41 @@ class VerificationConsumer(BaseConsumer):
         if not acquired:
             return
 
+        t0 = time.monotonic()
+        error_msg: Optional[str] = None
+
         try:
             session.status = SessionStatus.VERIFYING
             session.current_step = "verifying"
-            await store.update(session_id, status=session.status, current_step=session.current_step)
+            SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
 
             agent = VerificationAgent()
             summary = await agent.process(session)
 
-            await store.update(
+            SessionPersistence.dual_write(
                 session_id,
                 status=session.status,
                 current_step=session.current_step,
             )
 
-            # 根据校验结果决定下一步
+            SessionPersistence.save_conversation(
+                session_id=session_id,
+                agent_name="verification",
+                step_order=1,
+                cognitive_summary=summary.model_dump() if summary else None,
+                duration_ms=int((time.monotonic() - t0) * 1000),
+            )
+
             from omniops.events.publisher import get_publisher
             publisher = await get_publisher()
 
-            if summary.required_action == "pending_human":
+            # Check needs_approval: if the plan requires human sign-off, send to HITL
+            needs_approval = session.suggestion.needs_approval if session.suggestion else False
+
+            if needs_approval:
                 session.current_step = "pending_human"
                 session.status = SessionStatus.PENDING_HUMAN
-                await store.update(session_id, status=session.status, current_step=session.current_step)
+                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_human_review_required(
                     session_id=session_id,
                     timeout_seconds=600,
@@ -58,18 +74,30 @@ class VerificationConsumer(BaseConsumer):
                     risk_level=session.suggestion.risk_level if session.suggestion else "low",
                 )
             else:
-                session.current_step = "failed"
-                session.status = SessionStatus.FAILED
-                await store.update(session_id, status=session.status, current_step=session.current_step)
+                # All checks passed + no approval needed — auto-complete
+                session.current_step = "completed"
+                session.status = SessionStatus.COMPLETED
+                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_session_resolved(
                     session_id=session_id,
-                    final_status="failed",
+                    final_status="completed",
                     mttr_seconds=None,
                 )
 
             logger.info(
                 f"[VerificationConsumer] session={session_id} "
                 f"action={summary.required_action} checks={len(summary.evidence)}"
+            )
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"[VerificationConsumer] failed: {e}")
+            SessionPersistence.save_conversation(
+                session_id=session_id,
+                agent_name="verification",
+                step_order=1,
+                error_message=error_msg,
+                duration_ms=int((time.monotonic() - t0) * 1000),
             )
 
         finally:

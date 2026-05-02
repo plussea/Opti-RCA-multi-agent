@@ -17,6 +17,7 @@ HEADER_MAPPINGS: Dict[str, str] = {
     r"网元": "ne_name",
     r"设备名": "ne_name",
     r"device[_]?name": "ne_name",
+    r"^设备$": "ne_name",          # 光网络 CSV: "设备" 列 → ne_name
     # 告警码变体
     r"告警码": "alarm_code",
     r"alarm[_]?code": "alarm_code",
@@ -48,6 +49,12 @@ HEADER_MAPPINGS: Dict[str, str] = {
     r"板卡类型": "board_type",
     r"board[_]?type": "board_type",
     r"板卡型号": "board_type",
+    # 定位信息（光网络 CSV）
+    r"定位信息": "location",
+    r"location": "location",
+    # 拓扑 ID（光网络 CSV）
+    r"拓扑.?id": "topology_id",
+    r"topology[_]?id": "topology_id",
 }
 
 # 告警级别标准化映射
@@ -55,10 +62,11 @@ SEVERITY_MAPPINGS: Dict[str, Severity] = {
     "critical": Severity.CRITICAL,
     "危急": Severity.CRITICAL,
     "严重": Severity.CRITICAL,
+    "紧急": Severity.CRITICAL,    # 光网络 CSV: 紧急 → Critical
     "major": Severity.MAJOR,
-    "重要": Severity.MAJOR,
+    "重要": Severity.MAJOR,       # 光网络 CSV: 重要 → Major
     "minor": Severity.MINOR,
-    "次要": Severity.MINOR,
+    "次要": Severity.MINOR,      # 光网络 CSV: 次要 → Minor
     "warning": Severity.WARNING,
     "警告": Severity.WARNING,
     "低": Severity.WARNING,
@@ -171,6 +179,13 @@ def ingest_csv(content: bytes) -> Tuple[List[AlarmRecord], List[Dict[Any, Any]]]
 
         if "board_type" in df.columns:
             record_dict["board_type"] = str(row["board_type"]).strip() if not pd.isna(row["board_type"]) else None
+
+        # 光网络扩展字段
+        if "location" in df.columns:
+            record_dict["location"] = str(row["location"]).strip() if not pd.isna(row["location"]) else None
+
+        if "topology_id" in df.columns:
+            record_dict["topology_id"] = str(row["topology_id"]).strip() if not pd.isna(row["topology_id"]) else None
 
         # 原始数据备份
         record_dict["raw_data"] = row.to_dict()

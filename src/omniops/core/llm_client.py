@@ -2,6 +2,7 @@
 
 .. deprecated::
     Use :func:`omniops.core.providers.get_provider` instead.
+    Prompt constants have moved to :mod:`omniops.core.prompts`.
 """
 import json
 import logging
@@ -12,6 +13,14 @@ from typing import Any, Dict, List, Optional, cast
 from anthropic import Anthropic
 
 from omniops.core.config import get_settings
+from omniops.core import prompts  # re-export for backward compat
+from omniops.core.prompts import (
+    DIAGNOSIS_SYSTEM_PROMPT,
+    DIAGNOSIS_USER_TEMPLATE,
+    PLANNING_SYSTEM_PROMPT,
+    PLANNING_USER_TEMPLATE,
+    get_alarm_dict_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -208,6 +217,10 @@ DIAGNOSIS_USER_TEMPLATE = """## 当前告警表
 ## 已知告警码含义
 
 {alarm_dict}
+
+## 知识图谱关联（GraphRAG）
+
+{kg_context}
 
 请分析上述告警表，输出诊断结果（JSON 格式）：
 

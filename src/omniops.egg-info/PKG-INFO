@@ -4,6 +4,7 @@ Version: 0.1.0
 Summary: OmniOps — 结构化数据驱动的智能诊断与建议系统
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
+License-File: LICENSE
 Requires-Dist: fastapi>=0.104.0
 Requires-Dist: uvicorn[standard]>=0.24.0
 Requires-Dist: pydantic>=2.5.0
@@ -25,6 +26,7 @@ Requires-Dist: loguru>=0.7.0
 Requires-Dist: pyyaml>=6.0.0
 Requires-Dist: python-dotenv>=1.0.1
 Requires-Dist: aio-pika>=9.0.0
+Requires-Dist: neo4j>=5.0.0
 Provides-Extra: ocr
 Requires-Dist: paddlepaddle>=2.5.0; extra == "ocr"
 Requires-Dist: paddleocr>=2.7.0; extra == "ocr"
@@ -40,6 +42,7 @@ Requires-Dist: mypy>=1.7.0; extra == "dev"
 Requires-Dist: pre-commit>=3.5.0; extra == "dev"
 Requires-Dist: types-python-dateutil; extra == "dev"
 Requires-Dist: types-redis; extra == "dev"
+Requires-Dist: types-PyYAML; extra == "dev"
 
 # OmniOps
 
@@ -101,10 +104,11 @@ OmniOps automates the root cause analysis and remediation planning for optical n
 │  └──────────────────┘                                          │
 └──────────────────────────────────────────────────────────────────┘
 
-  PostgreSQL ── persistent state, audit log
-  Redis      ── session cache, working memory
-  RabbitMQ   ── event bus, async agent decoupling
-  SQLite     ── RAG vector store (no extra infra)
+  PostgreSQL port 5432 (pgvector), user/pass: postgres/postgres
+  Redis      port 6379
+  RabbitMQ   port 5672 + 15672 (ui: omniops/omniops123)
+  Neo4j      port 7687
+  Next.js    port 3000 (nginx 后，访问 http://localhost)
 ```
 
 ---
@@ -114,6 +118,8 @@ OmniOps automates the root cause analysis and remediation planning for optical n
 | | |
 |---|---|
 | **Multi-Agent Pipeline** | 5 specialized agents orchestrated by a state-machine Router with event-driven architecture |
+| **光网络告警感知** | 自动解析光网络 CSV 格式（设备/告警级别/拓扑 id/定位信息），支持 MESH/RING 星型拓扑 |
+| **拓扑感知推理** | 基于 Topology JSON 文件查询网元邻居、链路影响范围、业务服务 |
 | **LLM-Powered Diagnosis** | Supports Anthropic, OpenAI, OpenRouter, MiniMax via a pluggable Model Registry |
 | **RAG Knowledge Base** | Learns from past incidents; the more you use it, the smarter it gets |
 | **Human-in-the-Loop** | High-risk actions auto-escalate to engineers via RabbitMQ; no thread blocking |
@@ -138,10 +144,13 @@ uv run python demo.py
 ### Full stack (Docker)
 
 ```bash
-docker compose up -d
-uv run python -m omniops.api.main
-# Open http://localhost:8000/docs
+docker compose up --build -d
+# Open http://localhost          → OmniOps Command Center（Next.js 前端）
+# Open http://localhost/docs     → FastAPI 文档
+# Open http://localhost:15672   → RabbitMQ 管理界面（omniops/omniops123）
 ```
+
+**前端架构**：`nginx` 反向代理，`NEXT_PUBLIC_API_BASE=http://nginx`，API 路由到 `omniops:8000`。前端通过 SSE（`/v1/sessions/{id}/stream`）实时接收状态更新。
 
 ---
 
@@ -187,25 +196,48 @@ uv run python -m omniops.api.main
 
 ## API
 
+All API endpoints are available behind nginx at `http://localhost/v1/` (or directly at `http://localhost:8000/v1/`).
+
 ### Create a diagnosis session
 
 ```bash
-curl -X POST http://localhost:8000/v1/sessions \
+curl -X POST http://localhost/v1/sessions \
   -F "file=@alarms.csv"
 # → {"session_id": "sess_xxx", "status": "perceived", "estimated_seconds": 60}
 ```
 
-### Poll result
+### List active sessions
 
 ```bash
-curl http://localhost:8000/v1/sessions/{session_id}/result
+curl http://localhost/v1/sessions
+# → [{session_id, status, current_step, ne_count, root_cause, ...}, ...]
+```
+
+### SSE real-time stream
+
+```bash
+curl -N http://localhost/v1/sessions/{session_id}/stream --max-time 30
+# → event: status\ndata: {session}\n\n  (every 1.5s until terminal status)
+```
+
+### Get diagnosis result
+
+```bash
+curl http://localhost/v1/sessions/{session_id}/result
 # → {diagnosis: {root_cause, confidence, evidence}, impact: {...}, suggestion: {...}}
+```
+
+### Get agent conversations
+
+```bash
+curl http://localhost/v1/sessions/{session_id}/conversations
+# → [{agent_name, step_order, tokens_used, model_name, cognitive_summary, ...}, ...]
 ```
 
 ### Engineer feedback
 
 ```bash
-curl -X POST http://localhost:8000/v1/sessions/{session_id}/feedback \
+curl -X POST http://localhost/v1/sessions/{session_id}/feedback \
   -H "Content-Type: application/json" \
   -d '{"decision": "adopted", "actual_action": "已更换光纤", "effectiveness": "resolved"}'
 ```
@@ -235,7 +267,7 @@ All providers work out of the box: just set `LLM_PROVIDER` and the API key.
 # Install with dev dependencies
 uv sync --extra dev
 
-# Run tests (76 passing)
+# Run tests (88 passing)
 uv run pytest tests/ -v
 
 # Code quality
