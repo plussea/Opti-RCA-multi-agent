@@ -35,3 +35,7 @@ Thumbs.db
 
 # uv
 uv.lock
+
+# Agent memory & local config
+.claude/
+.github/
