@@ -40,24 +40,24 @@ class PlanningConsumer(BaseConsumer):
             if not session.impact:
                 impact_agent = ImpactAgent()
                 await impact_agent.process(session)
-                SessionPersistence.dual_write(session_id, impact=session.impact)
+                await SessionPersistence.dual_write(session_id, impact=session.impact)
 
             # 执行规划
             session.status = SessionStatus.PLANNING
             session.current_step = "planning"
-            SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
+            await SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
 
             plan_agent = PlanningAgent()
             plan_out = await plan_agent.process(session)
 
-            SessionPersistence.dual_write(
+            await SessionPersistence.dual_write(
                 session_id,
                 status=session.status,
                 current_step=session.current_step,
                 suggestion=session.suggestion,
             )
 
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="planning",
                 step_order=1,
@@ -72,7 +72,7 @@ class PlanningConsumer(BaseConsumer):
             if suggestion and suggestion.needs_approval:
                 session.current_step = "pending_human"
                 session.status = SessionStatus.PENDING_HUMAN
-                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
+                await SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_human_review_required(
                     session_id=session_id,
                     timeout_seconds=600,
@@ -84,7 +84,7 @@ class PlanningConsumer(BaseConsumer):
             else:
                 session.current_step = "verifying"
                 session.status = SessionStatus.VERIFYING
-                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
+                await SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_verification_requested(session)
 
             logger.info(f"[PlanningConsumer] completed session={session_id}")
@@ -92,7 +92,7 @@ class PlanningConsumer(BaseConsumer):
         except Exception as e:
             error_msg = str(e)
             logger.error(f"[PlanningConsumer] failed: {e}")
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="planning",
                 step_order=1,

@@ -40,10 +40,16 @@ async def run_agent_chain_sync(
         else:
             continue
 
-        await agent.process(session)
+        try:
+            logger.info(f"[sync-chain] executing {agent_name}...")
+            await agent.process(session)
+            logger.info(f"[sync-chain] {agent_name} done, status={session.status}, step={session.current_step}")
+        except Exception as e:
+            logger.error(f"[sync-chain] {agent_name} failed: {e}", exc_info=True)
+
         router.route_after_agent(session, agent_name)
 
-        SessionPersistence.dual_write(
+        await SessionPersistence.dual_write(
             session.session_id,
             status=session.status,
             current_step=session.current_step,
@@ -53,4 +59,5 @@ async def run_agent_chain_sync(
         )
 
         if session.status in (SessionStatus.COMPLETED, SessionStatus.RESOLVED, SessionStatus.PENDING_HUMAN):
+            logger.info(f"[sync-chain] terminal status reached ({session.status}), stopping")
             break

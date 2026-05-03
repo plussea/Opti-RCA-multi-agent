@@ -61,7 +61,7 @@ class DiagnosisConsumer(BaseConsumer):
             )
 
             # 保存 Agent 对话记录
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="diagnosis",
                 step_order=1,
@@ -98,7 +98,7 @@ class DiagnosisConsumer(BaseConsumer):
             error_msg = str(e)
             logger.error(f"[DiagnosisConsumer] failed: {e}")
             # 保存失败记录
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="diagnosis",
                 step_order=1,

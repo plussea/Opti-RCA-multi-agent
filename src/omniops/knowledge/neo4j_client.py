@@ -220,7 +220,7 @@ class Neo4jClient:
         await self.connect()
         if alarm_names:
             cql = """
-            MATCH (r:Rule)-[:IS_CAUSED_BY|TRIGGERS]->(a:Alarm)
+            MATCH (r:Rule)-[:IS_CAUSED_BY]->(a:Alarm)
             WHERE a.name IN $names
             RETURN r.rule_id as rule_id, r.name as name,
                    coalesce(r.content, r.description, '') as content

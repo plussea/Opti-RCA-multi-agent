@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     anthropic_model: str = Field(
         default="claude-3-5-sonnet-20241022",
     )
-    anthropic_max_tokens: int = Field(default=2048)
+    anthropic_max_tokens: int = Field(default=4096)
 
     # ===================
     # Generic LLM settings (used when provider != anthropic)

@@ -57,7 +57,7 @@ class ClosureConsumer(BaseConsumer):
                 status=SessionStatus.RESOLVED,
                 current_step="resolved",
             )
-            SessionPersistence.dual_write(
+            await SessionPersistence.dual_write(
                 session_id,
                 status=SessionStatus.RESOLVED,
                 current_step="resolved",

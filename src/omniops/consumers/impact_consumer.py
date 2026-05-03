@@ -50,7 +50,7 @@ class ImpactConsumer(BaseConsumer):
                 impact=session.impact,
             )
 
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="impact",
                 step_order=1,
@@ -70,7 +70,7 @@ class ImpactConsumer(BaseConsumer):
         except Exception as e:
             error_msg = str(e)
             logger.error(f"[ImpactConsumer] failed: {e}")
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="impact",
                 step_order=1,

@@ -31,7 +31,7 @@ DIAGNOSIS_USER_TEMPLATE = """## 当前告警表
 
 {kg_context}
 
-请分析上述告警表，输出诊断结果（JSON 格式）：
+请分析上述告警表，严格输出 JSON 格式诊断结果，不要输出任何其他内容：
 
 ```json
 {{
@@ -42,7 +42,9 @@ DIAGNOSIS_USER_TEMPLATE = """## 当前告警表
   ],
   "uncertainty": "可能受光纤劣化影响"
 }}
-```"""
+```
+
+只输出 JSON 对象，不要解释，不要分析。"""
 
 
 # 方案 Agent 的 Prompt 模板
@@ -67,21 +69,23 @@ PLANNING_USER_TEMPLATE = """## 根因分析
 
 {impact}
 
-请生成修复方案（JSON 格式）：
+请生成修复方案，严格遵循以下 JSON 格式，不要输出任何其他内容：
 
 ```json
 {{
-  "root_cause": "...",
+  "root_cause": "根因描述（与上述一致）",
   "suggested_actions": [
-    {{"step": 1, "action": "...", "estimated_time": "10min", "service_impact": "none"}},
-    {{"step": 2, "action": "...", "estimated_time": "30min", "service_impact": "brief_interrupt"}}
+    {{"step": 1, "action": "具体操作内容", "estimated_time": "5~15min", "service_impact": "none|brief_interrupt|requires_planned"}},
+    {{"step": 2, "action": "具体操作内容", "estimated_time": "10~30min", "service_impact": "none|brief_interrupt|requires_planned"}}
   ],
-  "required_tools": ["工具1", "工具2"],
-  "fallback_plan": "如果步骤1无效，执行...",
-  "risk_level": "medium",
+  "required_tools": ["工具名称1", "工具名称2"],
+  "fallback_plan": "如果步骤1无效，执行的备选方案",
+  "risk_level": "low|medium|high",
   "needs_approval": true
 }}
-```"""
+```
+
+只输出 JSON，不要解释，不要分析，直接输出 JSON 对象。"""
 
 
 # 告警码字典（内嵌）

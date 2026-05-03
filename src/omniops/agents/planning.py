@@ -40,12 +40,16 @@ class PlanningAgent(BaseAgent):
 
         # 尝试 LLM 生成（带超时保护）
         suggestion = None
-        llm_called = False
+        provider = None
         try:
             from omniops.core.providers import get_provider
-            get_provider()
-            logger.info(f"[Planning] calling LLM for session={session.session_id}")
+            provider = get_provider()
+        except Exception as e:
+            logger.warning(f"[Planning] LLM provider unavailable: {e}")
+
+        if provider:
             try:
+                logger.info(f"[Planning] calling LLM for session={session.session_id}")
                 import asyncio
                 suggestion = await asyncio.wait_for(
                     self._llm_planning(
@@ -55,14 +59,13 @@ class PlanningAgent(BaseAgent):
                     ),
                     timeout=50.0,
                 )
-                llm_called = True
                 logger.info(f"[Planning] LLM returned suggestion successfully")
             except asyncio.TimeoutError:
                 logger.error(f"[Planning] LLM call timed out after 50s, falling back to template")
             except Exception as e:
                 logger.error(f"[Planning] LLM call failed: {e}")
-        except Exception as e:
-            logger.warning(f"[Planning] no LLM provider configured: {e}")
+        else:
+            logger.warning(f"[Planning] no LLM provider, using template")
 
         # 如果 LLM 失败，使用模板
         if not suggestion:

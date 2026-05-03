@@ -38,6 +38,13 @@ class SQLiteVectorStore:
             )
         """)
 
+        # 确保 embedding 列存在（已有表缺少该列时升级）
+        try:
+            cursor.execute("ALTER TABLE knowledge_entries ADD COLUMN embedding TEXT")
+            logger.info("Added embedding column to knowledge_entries")
+        except Exception:
+            pass  # 列已存在
+
         # 简单文本索引（LIKE）
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS text_index (
@@ -245,10 +252,15 @@ class SQLiteVectorStore:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT id, content, alarm_codes, root_cause, metadata, embedding, hit_count, effectiveness_rate "
-            "FROM knowledge_entries WHERE embedding IS NOT NULL"
-        )
+        # Graceful: skip if embedding column doesn't exist yet (old schema)
+        try:
+            cursor.execute(
+                "SELECT id, content, alarm_codes, root_cause, metadata, embedding, hit_count, effectiveness_rate "
+                "FROM knowledge_entries WHERE embedding IS NOT NULL"
+            )
+        except Exception:
+            conn.close()
+            return []
 
         scored: List[tuple[float, tuple]] = []
         for row in cursor.fetchall():

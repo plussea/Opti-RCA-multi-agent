@@ -54,7 +54,7 @@ class HumanReviewConsumer(BaseConsumer):
         )
 
         # 持久化
-        SessionPersistence.dual_write(
+        await SessionPersistence.dual_write(
             session_id,
             status=SessionStatus.PENDING_HUMAN,
             current_step="pending_human",
@@ -101,7 +101,7 @@ class HumanReviewConsumer(BaseConsumer):
                 current_step="resolving",
                 human_feedback=session.human_feedback,
             )
-            SessionPersistence.dual_write(
+            await SessionPersistence.dual_write(
                 session_id,
                 status=status,
                 current_step="resolving",
@@ -150,7 +150,7 @@ class HumanReviewConsumer(BaseConsumer):
                 status=SessionStatus.ESCALATED,
                 current_step="escalated",
             )
-            SessionPersistence.dual_write(
+            await SessionPersistence.dual_write(
                 session_id,
                 status=SessionStatus.ESCALATED,
                 current_step="escalated",

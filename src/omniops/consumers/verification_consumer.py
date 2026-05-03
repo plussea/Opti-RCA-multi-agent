@@ -37,18 +37,18 @@ class VerificationConsumer(BaseConsumer):
         try:
             session.status = SessionStatus.VERIFYING
             session.current_step = "verifying"
-            SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
+            await SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
 
             agent = VerificationAgent()
             summary = await agent.process(session)
 
-            SessionPersistence.dual_write(
+            await SessionPersistence.dual_write(
                 session_id,
                 status=session.status,
                 current_step=session.current_step,
             )
 
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="verification",
                 step_order=1,
@@ -65,7 +65,7 @@ class VerificationConsumer(BaseConsumer):
             if needs_approval:
                 session.current_step = "pending_human"
                 session.status = SessionStatus.PENDING_HUMAN
-                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
+                await SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_human_review_required(
                     session_id=session_id,
                     timeout_seconds=600,
@@ -77,7 +77,7 @@ class VerificationConsumer(BaseConsumer):
                 # All checks passed + no approval needed — auto-complete
                 session.current_step = "completed"
                 session.status = SessionStatus.COMPLETED
-                SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
+                await SessionPersistence.dual_write(session_id, status=session.status, current_step=session.current_step)
                 await publisher.publish_session_resolved(
                     session_id=session_id,
                     final_status="completed",
@@ -92,7 +92,7 @@ class VerificationConsumer(BaseConsumer):
         except Exception as e:
             error_msg = str(e)
             logger.error(f"[VerificationConsumer] failed: {e}")
-            SessionPersistence.save_conversation(
+            await SessionPersistence.save_conversation(
                 session_id=session_id,
                 agent_name="verification",
                 step_order=1,

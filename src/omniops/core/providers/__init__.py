@@ -63,6 +63,10 @@ def _build_provider(name: str) -> BaseProvider:
 
 def _build_openrouter(settings: Any) -> BaseProvider:
     """Build OpenRouter provider (OpenAI-compatible API)"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[Provider] building OpenRouter: model={settings.llm_model}, "
+                 f"max_tokens={settings.anthropic_max_tokens}, api_key_set={bool(settings.openrouter_api_key)}")
     from omniops.core.providers.openrouter_provider import OpenRouterProvider
 
     config = ProviderConfig(
