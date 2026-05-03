@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # ===================
     # Generic LLM settings (used when provider != anthropic)
     # ===================
-    llm_provider: str = Field(default="anthropic", validation_alias="LLM_PROVIDER")
+    llm_provider: str = Field(default="openrouter", validation_alias="LLM_PROVIDER")
     llm_model: str = Field(default="claude-3-5-sonnet-20241022", validation_alias="LLM_MODEL")
 
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
         default="nvidia/llama-nemotron-embed-vl-1b-v2:free",
         validation_alias="EMBEDDING_MODEL",
     )
-    embedding_dim: int = Field(default=1536)
+    embedding_dim: int = Field(default=2048)  # nvidia/llama-nemotron-embed-vl-1b-v2:free
 
     # ===================
     # Neo4j 配置

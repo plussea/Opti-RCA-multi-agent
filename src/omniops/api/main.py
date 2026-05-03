@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from omniops.api.routes.sessions import router as sessions_router
 from omniops.api.routes.health import router as health_router
 from omniops.api.routes.knowledge import router as knowledge_router
+from omniops.api.routes.ocr import router as ocr_router
 from omniops.core.config import get_settings
 from omniops.core.database import close_db, init_db
 from omniops.memory.redis_store import get_redis_session_store
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(sessions_router)
     app.include_router(knowledge_router)
+    app.include_router(ocr_router)
 
     return app
 

@@ -1,4 +1,4 @@
-"""SQLite 向量存储和 RAG 检索（Demo 级，无需额外依赖）"""
+"""SQLite 向量存储和 RAG 检索（带 OpenRouter Embedding）"""
 import json
 import logging
 import sqlite3
@@ -31,6 +31,7 @@ class SQLiteVectorStore:
                 alarm_codes TEXT,
                 root_cause TEXT,
                 metadata TEXT,
+                embedding TEXT,
                 created_at TEXT,
                 hit_count INTEGER DEFAULT 0,
                 effectiveness_rate REAL DEFAULT 0.0
@@ -61,8 +62,9 @@ class SQLiteVectorStore:
         text: str,
         metadata: Optional[Dict[str, Any]] = None,
         doc_id: Optional[str] = None,
+        embedding: Optional[List[float]] = None,
     ) -> str:
-        """添加知识条目"""
+        """添加知识条目（可选 embedding 向量）"""
         if doc_id is None:
             doc_id = f"know_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
 
@@ -76,8 +78,8 @@ class SQLiteVectorStore:
         cursor.execute(
             """
             INSERT OR REPLACE INTO knowledge_entries
-            (id, content, alarm_codes, root_cause, metadata, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (id, content, alarm_codes, root_cause, metadata, embedding, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 doc_id,
@@ -85,6 +87,7 @@ class SQLiteVectorStore:
                 json.dumps(alarm_codes),
                 root_cause,
                 json.dumps(metadata),
+                json.dumps(embedding) if embedding is not None else None,
                 datetime.utcnow().isoformat(),
             ),
         )
@@ -100,7 +103,7 @@ class SQLiteVectorStore:
         conn.commit()
         conn.close()
 
-        logger.info(f"Added knowledge entry: {doc_id}")
+        logger.info(f"Added knowledge entry: {doc_id}" + (", embedding stored" if embedding else ""))
         return doc_id
 
     def _extract_keywords(self, text: str, alarm_codes: List[str]) -> List[str]:
@@ -233,6 +236,51 @@ class SQLiteVectorStore:
         conn.close()
         return results[:top_k]
 
+    def search_by_embedding(
+        self,
+        query_embedding: List[float],
+        top_k: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """基于 embedding 向量的余弦相似度检索"""
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT id, content, alarm_codes, root_cause, metadata, embedding, hit_count, effectiveness_rate "
+            "FROM knowledge_entries WHERE embedding IS NOT NULL"
+        )
+
+        scored: List[tuple[float, tuple]] = []
+        for row in cursor.fetchall():
+            emb_str = row[5]
+            if not emb_str:
+                continue
+            try:
+                emb = json.loads(emb_str)
+            except Exception:
+                continue
+            # 余弦相似度（两个向量均已归一化）
+            sim = sum(a * b for a, b in zip(query_embedding, emb))
+            scored.append((sim, row))
+
+        conn.close()
+
+        # 按相似度降序排列
+        scored.sort(key=lambda x: x[0], reverse=True)
+        results = []
+        for sim, row in scored[:top_k]:
+            results.append({
+                "id": row[0],
+                "content": row[1],
+                "alarm_codes": json.loads(row[2]) if row[2] else [],
+                "root_cause": row[3],
+                "metadata": json.loads(row[4]) if row[4] else {},
+                "hit_count": row[6],
+                "effectiveness_rate": row[7],
+                "similarity": round(sim, 4),
+            })
+        return results
+
     def update_knowledge(self, doc_id: str, text: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
         """更新知识条目"""
         try:
@@ -310,16 +358,32 @@ async def search_similar_cases(
     alarm_codes: Optional[List[str]] = None,
     top_k: int = 3,
 ) -> List[Dict[str, Any]]:
-    """搜索相似案例"""
+    """搜索相似案例（优先 embedding 语义检索，降级为文本匹配）"""
     vector_store = get_vector_store()
+    results: List[Dict[str, Any]] = []
 
-    results = []
+    # 1. 语义 embedding 检索（优先）
+    try:
+        from omniops.core.embeddings import get_embedding
+        settings = get_settings()
+        if settings.embedding_api_key:
+            query_emb = await get_embedding(query)
+            emb_results = vector_store.search_by_embedding(query_emb, top_k=top_k)
+            results.extend(emb_results)
+            logger.info(f"[RAG] embedding search: {len(emb_results)} results")
+        else:
+            logger.warning("[RAG] embedding disabled — EMBEDDING_API_KEY not set")
+    except Exception as emb_err:
+        logger.warning(f"[RAG] embedding search failed, falling back to text: {emb_err}")
 
-    # 语义检索
-    semantic_results = vector_store.search(query=query, top_k=top_k)
-    results.extend(semantic_results)
+    # 2. 降级：文本语义检索
+    try:
+        semantic_results = vector_store.search(query=query, top_k=top_k)
+        results.extend(semantic_results)
+    except Exception as e:
+        logger.warning(f"[RAG] text search failed: {e}")
 
-    # 如果有告警码，执行精确匹配
+    # 3. 精确告警码匹配
     if alarm_codes:
         exact_results = vector_store.search_by_alarm_code(
             alarm_codes=alarm_codes,
@@ -327,15 +391,13 @@ async def search_similar_cases(
         )
         results.extend(exact_results)
 
-    # 去重
-    seen_ids = set()
-    fused_results = []
+    # 去重 + 按相似度排序
+    seen_ids: set = set()
+    fused_results: List[Dict[str, Any]] = []
     for r in sorted(results, key=lambda x: x.get("similarity", 0), reverse=True):
         if r["id"] not in seen_ids:
             seen_ids.add(r["id"])
             fused_results.append(r)
-
-            # 增加命中计数
             vector_store.increment_hit_count(r["id"])
 
     return fused_results[:top_k]
@@ -347,7 +409,7 @@ async def ingest_knowledge(
     suggested_actions: List[Dict[str, Any]],
     source_session: str,
 ) -> str:
-    """将诊断结果摄入知识库"""
+    """将诊断结果摄入知识库（同时存储 embedding 向量）"""
     vector_store = get_vector_store()
 
     # alarm_codes 参数实际传入的是 alarm_names（语义一致，内部用 alarm_codes 列名存储）
@@ -371,7 +433,18 @@ async def ingest_knowledge(
         "created_at": datetime.utcnow().isoformat(),
     }
 
-    doc_id = vector_store.add_knowledge(text=text, metadata=metadata)
+    # 计算 embedding 并存储
+    embedding = None
+    try:
+        from omniops.core.embeddings import get_embedding
+        settings = get_settings()
+        if settings.embedding_api_key:
+            embedding = await get_embedding(text)
+            logger.info(f"[RAG] computed embedding for new entry, dim={len(embedding)}")
+    except Exception as emb_err:
+        logger.warning(f"[RAG] failed to compute embedding: {emb_err}")
+
+    doc_id = vector_store.add_knowledge(text=text, metadata=metadata, embedding=embedding)
     return doc_id
 
 
