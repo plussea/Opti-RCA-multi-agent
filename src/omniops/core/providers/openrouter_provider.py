@@ -65,6 +65,7 @@ class OpenRouterProvider(BaseProvider):
                 "max_tokens": self.config.max_tokens,
                 **extra_body,
             },
+            timeout=httpx.Timeout(self.config.timeout, connect=10.0),
         )
         response.raise_for_status()
         data = response.json()

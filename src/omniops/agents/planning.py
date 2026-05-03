@@ -38,18 +38,31 @@ class PlanningAgent(BaseAgent):
             if impact.affected_services:
                 impact_text += f"- 受影响业务：{', '.join(impact.affected_services)}"
 
-        # 尝试 LLM 生成
+        # 尝试 LLM 生成（带超时保护）
         suggestion = None
+        llm_called = False
         try:
             from omniops.core.providers import get_provider
             get_provider()
-            suggestion = await self._llm_planning(
-                root_cause=root_cause,
-                confidence=confidence,
-                impact_text=impact_text,
-            )
+            logger.info(f"[Planning] calling LLM for session={session.session_id}")
+            try:
+                import asyncio
+                suggestion = await asyncio.wait_for(
+                    self._llm_planning(
+                        root_cause=root_cause,
+                        confidence=confidence,
+                        impact_text=impact_text,
+                    ),
+                    timeout=50.0,
+                )
+                llm_called = True
+                logger.info(f"[Planning] LLM returned suggestion successfully")
+            except asyncio.TimeoutError:
+                logger.error(f"[Planning] LLM call timed out after 50s, falling back to template")
+            except Exception as e:
+                logger.error(f"[Planning] LLM call failed: {e}")
         except Exception as e:
-            logger.warning(f"LLM planning failed, falling back to template: {e}")
+            logger.warning(f"[Planning] no LLM provider configured: {e}")
 
         # 如果 LLM 失败，使用模板
         if not suggestion:

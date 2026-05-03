@@ -38,7 +38,7 @@ DIAGNOSIS_USER_TEMPLATE = """## 当前告警表
   "root_cause": "根因描述",
   "confidence": 0.85,
   "evidence": [
-    {{"type": "alarm", "source": "NE-BJ-01", "code": "LINK_FAIL", "time": "2026-04-28T14:23:00"}}
+    {{"type": "alarm", "source": "NE-BJ-01", "alarm_name": "LINK_FAIL", "time": "2026-04-28T14:23:00"}}
   ],
   "uncertainty": "可能受光纤劣化影响"
 }}

@@ -68,24 +68,35 @@ class DiagnosisAgent(BaseAgent):
         root_cause, confidence, evidence = self._rule_based_diagnosis(records, alarm_names)
 
         # 如果配置了 LLM provider，尝试 LLM 增强
+        llm_called = False
         try:
             from omniops.core.providers import get_provider
             get_provider()
             try:
+                logger.info(f"[Diagnosis] calling LLM for session={session.session_id}, alarm_count={len(records)}")
                 llm_result = await self._llm_diagnosis(
                     records=records,
                     similar_cases=similar_cases,
                     kg_context=kg_context,
                 )
+                llm_called = True
                 if llm_result and llm_result.get("confidence", 0) > confidence:
                     root_cause = llm_result["root_cause"]
                     confidence = llm_result["confidence"]
                     if llm_result.get("evidence"):
-                        evidence = [Evidence(**e) for e in llm_result["evidence"]]
+                        try:
+                            evidence = [Evidence(**e) for e in llm_result["evidence"]]
+                        except Exception as ev_err:
+                            logger.warning(f"[Diagnosis] evidence parse failed: {ev_err}, keeping rule evidence")
+                    logger.info(f"[Diagnosis] LLM accepted (confidence={confidence:.2f}) over rules (confidence={0.85:.2f})")
+                elif llm_result:
+                    logger.info(f"[Diagnosis] LLM result not better than rules, keeping rules")
+                else:
+                    logger.warning(f"[Diagnosis] LLM returned None, using rules")
             except Exception as e:
-                logger.warning(f"LLM diagnosis failed, falling back to rules: {e}")
+                logger.error(f"[Diagnosis] LLM call failed, falling back to rules: {e}")
         except Exception:
-            pass  # No LLM provider configured, skip
+            logger.warning(f"[Diagnosis] no LLM provider configured, using rules")
 
         # 构建诊断结果
         diagnosis = DiagnosisResult(
